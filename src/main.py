@@ -12,46 +12,33 @@ class User:
 class Cell:
     pass # Abstracted away for now?
 
-def reset_state(allocator, operators):
+def reset_state():
     operator1 = Operator("Operator 1")
     operator2 = Operator("Operator 2")
     operators = [operator1, operator2]
     allocator = Allocator(operators)
-
-    state = (allocator.a, operator1.m, operator2.m)
-    return state
-
+    return allocator, operators, allocator.get_state(operators)
 
 def main():
-    operator1 = Operator("Operator 1")
-    operator2 = Operator("Operator 2")
-    operators = [operator1, operator2]
-    allocator = Allocator(operators)
-    pprint(operator1.incoming_packets)
-    t = 0
-    while t < TIMESTEPS or (not operator1.packet_queue.empty()):
-        operator1.rr_schedule(t)
-        t += 1
+    allocator, operators, state = reset_state()
 
-    state = reset_state(allocator, operators)
-
-    while True:
+    for t in range(0, TIMESTEPS):
         # Choose action to take given the state
         action = allocator.act(state)
 
         # Agent performs action
-        next_state, reward = allocator.step(action)
+        next_state, reward = allocator.step(action, operators, t)
 
         # Remember 
         allocator.cache(state, next_state, action, reward)
 
         # Learn
-        q, loss = allocator.learn()
+        q, loss = allocator.learn(t)
+
+        print(f'q: {q}, loss: {loss}')
 
         # Update state
         state = next_state
-
-    print(operator1.ema)
 
 if __name__ == '__main__':
     main()

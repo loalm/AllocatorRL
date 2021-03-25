@@ -1,1 +1,1 @@
-TIMESTEPS = 5 # Total number of TIMESTEPS
+TIMESTEPS = 100 # Total number of TIMESTEPS

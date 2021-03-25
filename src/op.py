@@ -17,9 +17,9 @@ class Operator:
                                     for step in range(TIMESTEPS)]
 
         self.packet_queue = queue.Queue()
-        self.m = self.spectrum_size
+        self.m = 0 # Request value to the allocator
         self.total_traffic_served = 0
-        self.ema = np.zeros(TIMESTEPS) # Exponential moving avg of traffic
+        self.traffic_ema = np.zeros(TIMESTEPS+10000) # Exponential moving avg of traffic
 
     def send_request(self):
         """
@@ -41,7 +41,7 @@ class Operator:
 
         Return: The amount of traffic served (bits) during this timestep.
         """
-        self.m = self.spectrum_size
+        current_spectrum = self.spectrum_size
         traffic_served = 0
         if t < len(self.incoming_packets):
             for p in self.incoming_packets[t]:
@@ -49,7 +49,7 @@ class Operator:
 
         pprint(self.packet_queue.queue)
 
-        while self.m > 0 and not self.packet_queue.empty():
+        while current_spectrum > 0 and not self.packet_queue.empty():
             print(f"a: {self.m}")
             p = self.packet_queue.get()
             chunk = p.spectral_efficiency * self.block_size # TODO: Double check this, only works assuming t=1s
@@ -58,25 +58,51 @@ class Operator:
             
             p.size -= chunk
             traffic_served += chunk
-            self.m -= self.block_size
+            current_spectrum -= self.block_size
             if p.size > 0:
                 self.packet_queue.put(p)
             else:
-                p.endtime = t
+                p.endtime = t # Packet done
         self.calc_reward(traffic_served, t)
+        self.calc_request(t)
         return traffic_served
+    
+    def get_reward(self, t):
+        """
+        Reward function : Total served traffic EMA
+        TODO: Add 5th percentile throughput minimum threshold
+        """
+        return self.traffic_ema[t]
+
+    def get_request(self):
+        """
+        Returns the resource request that is sent to the allocator.
+        m = sum(s_j / e_j), where
+        s_j : size of packet j
+        e_j : spectral efficiency of packet j
+        for every packet j in the packet queue
+        """
+        return self.m
 
     def calc_reward(self, traffic_served, t):
         """
-        Reward function (1): Total served traffic EMA
+        Calculates reward function : Total served traffic EMA
         # https://www.investopedia.com/terms/e/ema.asp
         # Don't know if accurate when t < n
         """
         value_t = traffic_served
         n = 20
         k = (2/(1+n))
-        if t < TIMESTEPS:
-            self.ema[t] = value_t * k + self.ema[t-1] * (1 - k)
-        else:
-            self.ema = np.append(self.ema, value_t * k + self.ema[t-1] * (1 - k))
-        return self.ema[t]
+        self.traffic_ema[t] = value_t * k + self.traffic_ema[t-1] * (1 - k)
+
+    def calc_request(self, t):
+        """
+        Calculates the resource request that is sent to the allocator.
+        m = sum(s_j / e_j), where
+        s_j : size of packet j
+        e_j : spectral efficiency of packet j
+        for every packet j in the packet queue
+        """
+        self.m = sum([p.size / p.spectral_efficiency for p in self.packet_queue.queue])
+
+
