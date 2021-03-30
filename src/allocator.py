@@ -2,8 +2,8 @@ import torch
 import numpy as np
 import random
 from queue import Queue
-from constants import *
-from neural import AllocateNet
+from src.constants import *
+from src.neural import AllocateNet
 
 class Allocator:
     def __init__(self, operators):
@@ -180,6 +180,6 @@ class Allocator:
 
         return (td_est.mean().item(), loss)
 
-    def send_allocation(operator, allocation):
-        pass
+        # def send_allocation(operator, allocation):
+        #     pass
 

@@ -1,8 +1,8 @@
 import numpy as np
 import queue
 from pprint import pprint
-from constants import *
-from packet import Packet
+from src.constants import *
+from src.packet import Packet
 
 class Operator:
     lam = 2 # Average number of packets arriving every timestep.
@@ -20,17 +20,6 @@ class Operator:
         self.m = 0 # Request value to the allocator
         self.total_traffic_served = 0
         self.traffic_ema = np.zeros(TIMESTEPS+10000) # Exponential moving avg of traffic
-
-    def send_request(self):
-        """
-        TODO: How often should an operator be able to send a request to the
-        allocator?
-        NOTE: Suggestion:
-        The operator may send a request to the allocator at most once
-        per timestep and only when the operator does not have an ongoing
-        spectrum loan.
-        """
-        pass
 
     def rr_schedule(self, t):
         """
@@ -86,9 +75,10 @@ class Operator:
 
     def calc_reward(self, traffic_served, t):
         """
-        Calculates reward function : Total served traffic EMA
+        Calculates reward function : Total served traffic exponential moving average (EMA)
         # https://www.investopedia.com/terms/e/ema.asp
         # Don't know if accurate when t < n
+        # NOTE: Could try a basic reward fn without EMA.
         """
         value_t = traffic_served
         n = 20
@@ -106,3 +96,13 @@ class Operator:
         self.m = sum([p.size / p.spectral_efficiency for p in self.packet_queue.queue])
 
 
+    # def send_request(self):
+    #     """
+    #     TODO: How often should an operator be able to send a request to the
+    #     allocator?
+    #     NOTE: Suggestion:
+    #     The operator may send a request to the allocator at most once
+    #     per timestep and only when the operator does not have an ongoing
+    #     spectrum loan.
+    #     """
+    #     pass
