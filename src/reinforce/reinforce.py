@@ -8,7 +8,7 @@ from torch import nn, optim
 import torch.nn.functional as F
 from torch.distributions.dirichlet import Dirichlet
 from itertools import count
-from torch.autograd import Variable
+#from torch.autograd import Variable
 import matplotlib.pyplot as plot
 
 
@@ -38,10 +38,10 @@ class Policy(nn.Module):
 
         self.net = nn.Sequential(
             nn.Linear(3, 128),
-            nn.Dropout(p=0.4),
+            #nn.Dropout(p=0.4),
             nn.ReLU(),
             nn.Linear(128, 2),
-            nn.Softmax()
+            nn.Softmax(dim = 0)
         )
 
     def forward(self, x):
@@ -51,17 +51,18 @@ class Policy(nn.Module):
         # action_scores = self.affine2(x)
         # #action_scores = torch.exp(action_scores)
         # return F.softmax(action_scores.clone(), dim=1)
-
-        return Variable(self.net(x),  requires_grad=True)
+        return self.net(x)
+        #return Variable(self.net(x),  requires_grad=True)
 
 policy = Policy()
-optimizer = optim.Adam(policy.parameters(), lr=1e-4) # TODO: Adjust learning rate
+optimizer = optim.Adam(policy.parameters(), lr=1e-3) # TODO: Adjust learning rate
 eps = np.finfo(np.float32).eps.item()
 
 def select_action(state):
     state = torch.from_numpy(state).type(torch.FloatTensor)
     #print(f"RETURNS state: {state}")
-    out = policy(Variable(state))
+    #out = policy(Variable(state))
+    out = policy(state)
     #print(f"RETURNS out: {out}")
     #out += eps # To make sure no out value is equal to Dirichlet lowerbound 0.
     d = Dirichlet(out+eps)
@@ -103,7 +104,7 @@ def plot_xy(x, y):
     plot.show()
 
 def main():
-    NUM_EPISODES = 100
+    NUM_EPISODES = 500
     running_reward = [10]
     for i_episode in range(NUM_EPISODES):
         state = env.reset_state()

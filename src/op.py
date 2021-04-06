@@ -6,8 +6,8 @@ from src.packet import Packet
 
 class Operator:
     lam = 2 # Average number of packets arriving every timestep.
-    spectrum_size = 2_500
-    block_size = 200
+    spectrum_size = 500
+    block_size = 15
     def __init__(self, name, packet_distribution = None):
         self.name = name
         self.cells = [] # TODO

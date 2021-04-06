@@ -8,39 +8,39 @@ from src.neural import AllocateNet
 class Allocator:
     def __init__(self):
         #self.operators = operators
-        self.spectrum_size = 2_500 # MHz
-        self.block_size = 20 # MHz
-        row = self.spectrum_size // self.block_size
-        col = TIMESTEPS
-        self.spectrum_pool = np.zeros((row, col))
+        self.spectrum_size = 500 # MHz
+        #self.block_size = 20 # MHz
+        #row = self.spectrum_size // self.block_size
+        #col = TIMESTEPS
+        #self.spectrum_pool = np.zeros((row, col))
 
-        self.exploration_rate = 1
-        self.exploration_rate_decay = 0.99999975
-        self.exploration_rate_min = 0.1
-        self.gamma = 0.9
+        #self.exploration_rate = 1
+        #self.exploration_rate_decay = 0.99999975
+        #self.exploration_rate_min = 0.1
+        #self.gamma = 0.9
 
         self.a = self.spectrum_size
 
-        self.min_learn = 40 # min. experiences before training
-        self.learn_every = 3 # no. of experiences between updates to Q_online
-        self.sync_every = 10 # no. of experiences between Q_target & Q_online sync
+        #self.min_learn = 40 # min. experiences before training
+        #self.learn_every = 3 # no. of experiences between updates to Q_online
+        #self.sync_every = 10 # no. of experiences between Q_target & Q_online sync
 
-        self.save_every = 1000 # no. of experiences between saving Mario net
+        #self.save_every = 1000 # no. of experiences between saving Mario net
 
-        self.memory = Queue()
-        self.batch_size = 32
-        self.state_dim = (3,1)
-        self.action_dim = 5
+        #self.memory = Queue()
+        #self.batch_size = 32
+        #self.state_dim = (3,1)
+        #self.action_dim = 5
 
-        self.net = AllocateNet(self.state_dim, self.action_dim).float()
+        #self.net = AllocateNet(self.state_dim, self.action_dim).float()
 
-        self.use_cuda = torch.cuda.is_available()
+        #self.use_cuda = torch.cuda.is_available()
 
-        if self.use_cuda:
-            self.net = self.net.to(device = 'cuda')
+        #if self.use_cuda:
+        #    self.net = self.net.to(device = 'cuda')
         
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
-        self.loss_fn = torch.nn.SmoothL1Loss() #self.loss = torch.nn.MSELoss()
+        #self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
+        #self.loss_fn = torch.nn.SmoothL1Loss() #self.loss = torch.nn.MSELoss()
 
     # def get_state(self, operators):
     #     [operator1, operator2] = operators

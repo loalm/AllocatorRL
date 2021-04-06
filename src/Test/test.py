@@ -12,7 +12,7 @@ def main():
     print(f'packet_distribution: {y1}')
 
     op1 = Operator("Op1", packet_distribution = y1)
-    op1.spectrum_size = 1500
+    op1.spectrum_size = 500
     op1.block_size = 15
     tot_traffic = op1.get_total_traffic_to_serve()
     tot_reward = 0
@@ -21,7 +21,7 @@ def main():
         reward = op1.get_reward(t)
         tot_reward += reward
         #print(f't: {t} Reward: {reward}')
-        print(f'queue: {op1.packet_queue.queue}')
+        #print(f'queue: {op1.packet_queue.queue}')
     
     print(f'Total traffic to serve: {tot_traffic}')
     print(f'Total reward: {tot_reward}')
@@ -55,4 +55,4 @@ def plott():
 
 
 if __name__ == '__main__':
-    plott()
+    main()
