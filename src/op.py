@@ -6,18 +6,21 @@ from src.packet import Packet
 
 class Operator:
     lam = 2 # Average number of packets arriving every timestep.
-    spectrum_size = 500
-    block_size = 50
-    def __init__(self, name):
+    spectrum_size = 2_500
+    block_size = 200
+    def __init__(self, name, packet_distribution = None):
         self.name = name
         self.cells = [] # TODO
-        self.packet_distribution = np.random.poisson(lam=self.lam,size=TIMESTEPS)
+        if packet_distribution is not None:
+            self.packet_distribution = packet_distribution
+        else:
+            self.packet_distribution = np.random.poisson(lam=self.lam,size=TIMESTEPS)
                     # TODO: This should be varying more
         self.incoming_packets = [[Packet(step) for _ in range(self.packet_distribution[step])] 
                                     for step in range(TIMESTEPS)]
 
         self.packet_queue = queue.Queue()
-        self.m = 0 # Request value to the allocator
+        self.request = 0 # Request value to the allocator
         self.total_traffic_served = 0
         self.traffic_ema = np.zeros(TIMESTEPS+10000) # Exponential moving avg of traffic
 
@@ -30,30 +33,32 @@ class Operator:
 
         Return: The amount of traffic served (bits) during this timestep.
         """
+        #print(f"rr_schedule {self.name} Spectrum size: {self.spectrum_size}")
         current_spectrum = self.spectrum_size
         traffic_served = 0
         if t < len(self.incoming_packets):
             for p in self.incoming_packets[t]:
                 self.packet_queue.put(p)
 
-        pprint(self.packet_queue.queue)
+        #pprint(self.packet_queue.queue)
 
         while current_spectrum > 0 and not self.packet_queue.empty():
-            print(f"a: {self.m}")
+            #print(f"a: {self.m}")
             p = self.packet_queue.get()
             chunk = p.spectral_efficiency * self.block_size # TODO: Double check this, only works assuming t=1s
-            if self.m < chunk:
-                return #Not enough resources a to schedule chunk
+            if current_spectrum < chunk:
+                break # Not enough resources to schedule chunk
             
+            #print(f"p.size: {p.size}, chunk: {chunk}, p.se: {p.spectral_efficiency}")
+            traffic_served += min(p.size, chunk)
             p.size -= chunk
-            traffic_served += chunk
             current_spectrum -= self.block_size
             if p.size > 0:
                 self.packet_queue.put(p)
             else:
                 p.endtime = t # Packet done
         self.calc_reward(traffic_served, t)
-        self.calc_request(t)
+        self.calc_request()
         return traffic_served
     
     def get_reward(self, t):
@@ -71,7 +76,7 @@ class Operator:
         e_j : spectral efficiency of packet j
         for every packet j in the packet queue
         """
-        return self.m
+        return self.request
 
     def calc_reward(self, traffic_served, t):
         """
@@ -83,9 +88,18 @@ class Operator:
         value_t = traffic_served
         n = 20
         k = (2/(1+n))
-        self.traffic_ema[t] = value_t * k + self.traffic_ema[t-1] * (1 - k)
+        #self.traffic_ema[t] = value_t * k + self.traffic_ema[t-1] * (1 - k)
+        self.traffic_ema[t] = traffic_served
 
-    def calc_request(self, t):
+    def get_total_traffic_to_serve(self):
+        tot_traffic = 0
+        for t in range(TIMESTEPS):
+            for p in self.incoming_packets[t]:
+                tot_traffic += p.size
+        return tot_traffic
+
+
+    def calc_request(self):
         """
         Calculates the resource request that is sent to the allocator.
         m = sum(s_j / e_j), where
@@ -93,7 +107,8 @@ class Operator:
         e_j : spectral efficiency of packet j
         for every packet j in the packet queue
         """
-        self.m = sum([p.size / p.spectral_efficiency for p in self.packet_queue.queue])
+        self.request = sum([p.size / p.spectral_efficiency for p in self.packet_queue.queue])
+        #print(f'Calc_request: {self.m}')
 
 
     # def send_request(self):

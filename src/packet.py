@@ -1,7 +1,7 @@
 import numpy as np
 
 class Packet:
-    size = 5 # Fixed packet size
+    size = 20 # Fixed packet size
     id = 1 # Static variable. Initial package should have id 0.
 
     def __init__(self, arrival_time, id=None):
@@ -11,7 +11,7 @@ class Packet:
         self.set_efficiency() # ((bit/s)/Hz)
 
     def set_efficiency(self):
-        mu, sigma = 0, 0.1 # mean and standard deviation
+        mu, sigma = 0.5, 0.5 # mean and standard deviation
         self.spectral_efficiency = abs(np.random.normal(mu, sigma, 1)[0])
 
     def set_id(self, id):
