@@ -1,16 +1,13 @@
 import argparse
 from src.Reinforce.environment import Environment
 from src.constants import TIMESTEPS
-import src.constants as constants
 import numpy as np
 import torch
 from torch import nn, optim
 import torch.nn.functional as F
 from torch.distributions.dirichlet import Dirichlet
 from itertools import count
-#from torch.autograd import Variable
 import matplotlib.pyplot as plot
-
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
@@ -21,9 +18,10 @@ parser.add_argument('--seed', type=int, default=543, metavar='N',
 #                    help='render the environment')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
-args = parser.parse_args()
 
-torch.autograd.set_detect_anomaly(True)
+parser.add_argument('--episodes', type=int, default=500, metavar='N',
+help='Number of training episodes (default: 500)')
+args = parser.parse_args()
 
 np.random.seed(args.seed)
 env = Environment()
@@ -37,8 +35,9 @@ class Policy(nn.Module):
         self.rewards = []
 
         self.net = nn.Sequential(
-            nn.Linear(3, 128),
-            #nn.Dropout(p=0.4),
+            nn.Softmax(dim = 0),
+            nn.Linear(2, 128),
+            nn.Dropout(p=0.6),
             nn.ReLU(),
             nn.Linear(128, 2),
             nn.Softmax(dim = 0)
@@ -49,13 +48,16 @@ class Policy(nn.Module):
         # x = self.dropout(x)
         # x = F.relu(x)
         # action_scores = self.affine2(x)
-        # #action_scores = torch.exp(action_scores)
         # return F.softmax(action_scores.clone(), dim=1)
-        return self.net(x)
+        x = self.net(x)
+        #x = torch.exp(x)
+        #x = F.log_softmax(x)
+        return x
+        #return self.net(x)
         #return Variable(self.net(x),  requires_grad=True)
 
 policy = Policy()
-optimizer = optim.Adam(policy.parameters(), lr=1e-3) # TODO: Adjust learning rate
+optimizer = optim.Adam(policy.parameters(), lr=1e-6) # TODO: Adjust learning rate
 eps = np.finfo(np.float32).eps.item()
 
 def select_action(state):
@@ -63,9 +65,8 @@ def select_action(state):
     #print(f"RETURNS state: {state}")
     #out = policy(Variable(state))
     out = policy(state)
-    #print(f"RETURNS out: {out}")
-    #out += eps # To make sure no out value is equal to Dirichlet lowerbound 0.
-    d = Dirichlet(out+eps)
+    #print(f"Out: {out}")
+    d = Dirichlet(out+eps) # Add epsilon to make sure no out value is equal to Dirichlet lowerbound 0.
     action = d.sample()
     #print(f"RETURNS log prob: {d.log_prob(action)}")
 
@@ -93,51 +94,75 @@ def finish_episode():
     del policy.saved_log_probs[:]
     #policy.saved_log_probs = Variable(torch.Tensor())
 
-def plot_xy(x, y):
-    print("Plotting...")
-    # Get x values of the sine wave
-    #time = np.arange(0, 10, 0.1);
-    # Amplitude of the sine wave is sine of a variable like time
-    #amplitude = np.sin(time)
-    # Plot a sine wave using time and amplitude obtained for the sine wave
-    plot.plot(x, y)
-    plot.show()
-
 def main():
-    NUM_EPISODES = 500
-    running_reward = [10]
+    NUM_EPISODES = args.episodes
+    running_reward = []
+    action_mem = np.array([0]*NUM_EPISODES, dtype='float')
+    
+    REWARD_GOAL = 170_000
+    goal_met = False
+
     for i_episode in range(NUM_EPISODES):
         state = env.reset_state()
         ep_reward = 0
+        #print("\n\n")
         for t in range(TIMESTEPS):
+            print(f"State: {state}")
             action = select_action(state)
+            #print(f"t: {t} Action: {action}")
             state, reward = env.step(action, t)
             policy.rewards.append(reward)
             ep_reward += reward
+            action_mem[i_episode] += action[0]
+        
+        if ep_reward > REWARD_GOAL:
+            print("Goal met!")
+            goal_met = True
 
-        #running_reward[-1] = 0.05 * ep_reward + (1 - 0.05) * running_reward[-1]
-        running_reward[-1] = ep_reward/TIMESTEPS
-        finish_episode()
+        if not goal_met:
+            finish_episode()
         if i_episode % args.log_interval == 0:
-            print(f'Episode {i_episode} \t Last reward: {ep_reward} \t Average reward: {running_reward}')
-            running_reward.append(running_reward[-1])
+            print(f'Episode {i_episode} \t Last reward: {ep_reward} \t Average reward:')
+            running_reward.append(ep_reward)
 
-    plot.plot(np.arange(0, NUM_EPISODES+args.log_interval, args.log_interval), running_reward)
+    action_mem /= TIMESTEPS
+
+    plot.plot(np.arange(0, NUM_EPISODES, args.log_interval), running_reward)
     plot.title('Average Reward per Training Episode')
     plot.xlabel('Episode')
-    plot.ylabel('Running Reward')
+    plot.ylabel('Running Reward [MB / s]')
     plot.savefig('avg_reward.png')
     plot.show()
     plot.close()
 
-    # plot.plot(env.operators[0].packet_distribution)
-    # plot.plot(env.operators[1].packet_distribution)
-    # plot.title('Packet distribution')
-    # plot.xlabel('Timestep (t)')
-    # plot.ylabel('Number of packets')
-    # plot.savefig('packet_distribution.png')
-    # plot.show()
-    # plot.close()
+    plot.plot(action_mem)
+    plot.title('Average Spectrum % Allocated to Operator 1 per training Episode')
+    plot.xlabel('Episode (i_episode)')
+    plot.ylabel('Spectrum %')
+    plot.savefig('avg_allocation.png')
+    plot.show()
+    plot.close()
+
+
+    plot.plot(env.operators[0].packet_distribution, label = env.operators[0].name)
+    plot.plot(env.operators[1].packet_distribution, label = env.operators[1].name)
+    plot.legend()
+    plot.title('Packet Distribution')
+    plot.xlabel('Timestep (t)')
+    plot.ylabel('Number of packets')
+    plot.savefig('packet_distribution.png')
+    plot.show()
+    plot.close()
+
+    plot.plot(env.operators[0].request_arr, label = env.operators[0].name)
+    plot.plot(env.operators[1].request_arr, label = env.operators[1].name)
+    plot.legend()
+    plot.title('Request Distribution')
+    plot.xlabel('Timestep [t]')
+    plot.ylabel('Request size [MHz * s]')
+    plot.savefig('request_distribution.png')
+    plot.show()
+    plot.close()
 
 
 if __name__ == '__main__':

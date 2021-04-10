@@ -8,9 +8,9 @@ from src.neural import AllocateNet
 class Allocator:
     def __init__(self):
         #self.operators = operators
-        self.spectrum_size = 500 # MHz
+        self.bandwidth = 100 # MHz
         #self.block_size = 20 # MHz
-        #row = self.spectrum_size // self.block_size
+        #row = self.bandwidth // self.block_size
         #col = TIMESTEPS
         #self.spectrum_pool = np.zeros((row, col))
 
@@ -19,7 +19,7 @@ class Allocator:
         #self.exploration_rate_min = 0.1
         #self.gamma = 0.9
 
-        self.a = self.spectrum_size
+        self.a = self.bandwidth
 
         #self.min_learn = 40 # min. experiences before training
         #self.learn_every = 3 # no. of experiences between updates to Q_online
@@ -85,18 +85,18 @@ class Allocator:
     #         p1 = [1, 0.75, 0.5, 0.25, 0] # Percent of spectrum allocated to operator 1
     #         p1 = p1[action_idx]
     #         p2 = 1 - p1  # Percent of spectrum allocated to operator 2
-    #         s1 = p1 * self.spectrum_size 
-    #         s2 = p2 * self.spectrum_size
+    #         s1 = p1 * self.bandwidth 
+    #         s2 = p2 * self.bandwidth
     #         return [s1, s2] 
 
     #     s = action_to_spectrum(action_idx)
 
     #     reward = 0
     #     for i, op in enumerate(operators):
-    #         op.spectrum_size += s[i]
-    #         op.rr_schedule(t)
+    #         op.bandwidth += s[i]
+    #         op.schedule_packets(t)
     #         reward += op.get_reward(t)
-    #         op.spectrum_size -= s[i]
+    #         op.bandwidth -= s[i]
 
     #     next_state = self.get_state(operators)
     #     return next_state, reward

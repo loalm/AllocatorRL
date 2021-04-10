@@ -6,18 +6,17 @@ from src.constants import *
 
 
 def main():
-
     x = np.linspace(-np.pi, np.pi, TIMESTEPS)
     y1 = (np.sin(x+np.pi*3/4)*10).astype(int) + 10
     print(f'packet_distribution: {y1}')
 
     op1 = Operator("Op1", packet_distribution = y1)
-    op1.spectrum_size = 500
+    op1.bandwidth = 500
     op1.block_size = 15
     tot_traffic = op1.get_total_traffic_to_serve()
     tot_reward = 0
     for t in range(TIMESTEPS):
-        op1.rr_schedule(t)
+        op1.schedule_packets(t)
         reward = op1.get_reward(t)
         tot_reward += reward
         #print(f't: {t} Reward: {reward}')
