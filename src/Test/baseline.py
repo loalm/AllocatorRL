@@ -41,36 +41,7 @@ def baseline_softmax(episodes=100, bandwidth=None):
 
     avg_reward /= NUM_EPISODES
 
-    # plot.plot(np.arange(0, NUM_EPISODES, args.log_interval), running_reward)
-    # plot.title(f'Average Reward with Baseline SOFTMAX Algorithm')
-    # plot.xlabel('Episode')
-    # plot.ylabel('Reward [Mb / s]')
-    # plot.savefig('baseline_softmax.png')
-    # plot.show()
-    # plot.close()
-
-    # # plot.plot(env.operators[0].packet_distribution, label = env.operators[0].name)
-    # # plot.plot(env.operators[1].packet_distribution, label = env.operators[1].name)
-    # # plot.legend()
-    # # plot.title('Packet Distribution')
-    # # plot.xlabel('Timestep (t)')
-    # # plot.ylabel('Number of packets')
-    # # plot.savefig('packet_distribution.png')
-    # # plot.show()
-    # # plot.close()
-
-    # plot.plot(env.operators[0].request_arr, label = env.operators[0].name)
-    # plot.plot(env.operators[1].request_arr, label = env.operators[1].name)
-    # plot.legend()
-    # plot.title('Request Distribution')
-    # plot.xlabel('Timestep [t]')
-    # plot.ylabel('Request size [MHz * s]')
-    # plot.savefig('baseline_softmax_request_distribution.png')
-    # plot.show()
-    # plot.close()
-
     plot_average_reward(env, args.log_interval, running_reward)
-
     plot_packet_distribution(env)
     plot_request_distribution(env)
     plot_total_throughput(env)
@@ -99,20 +70,10 @@ def baseline(episodes=500, bandwidth=None):
 
     avg_reward /= NUM_EPISODES
 
-    # plot.plot(np.arange(0, NUM_EPISODES, args.log_interval), running_reward)
-    # plot.title(f'Average Reward with {env.algorithm_name}')
-    # plot.xlabel('Episode')
-    # plot.ylabel('Reward [Mb / s]')
-    # plot.savefig('AverageReward_baseline.png')
-    # plot.show()
-    # plot.close()
-
     plot_average_reward(env, args.log_interval, running_reward)
-
     plot_packet_distribution(env)
     plot_request_distribution(env)
     plot_total_throughput(env)
-
 
     return avg_reward
 
