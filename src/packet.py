@@ -4,10 +4,10 @@ class Packet:
     size = 8 # 8*10^6 bits = 1 MB = 1*8 Mb fixed packet size
     id = 1 # Static variable. Initial package should have id 0.
 
-    def __init__(self, arrival_time, id=None):
+    def __init__(self, arrival_time=None, id=None):
         self.set_id(id)
-        self.arrival_time = arrival_time # ?
-        self.endtime = -1
+        self.arrival_time = arrival_time # [s]
+        self.endtime = -1 # [s]
         self.set_efficiency() # ((bit/s)/Hz) NOTE: bit, not Byte
 
     def set_efficiency(self):

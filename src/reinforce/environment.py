@@ -1,27 +1,22 @@
-#from src.allocator import Allocator
 from src.op import Operator
 from src.constants import TIMESTEPS
 import matplotlib.pyplot as plot
 import torch.nn.functional as F
-
 import numpy as np
 
 
 class Environment():
     def __init__(self):
         self.reset_state()
-        self.bandwidth = 35
-         # 100 Mhz
+        self.bandwidth = 10 # [Mhz]
 
     def get_state(self, t=0):
         """
         Returns the current state of the environment. 
         """
         [operator1, operator2] = self.operators
-        #state = [self.allocator.a, self.operators[0].get_request(), self.operators[1].get_request()]
 
         state = [self.operators[0].get_request(), self.operators[1].get_request()]
-        #state = [1000,1000]
         return np.array(state)
 
     def reset_state(self):
@@ -65,14 +60,3 @@ class Environment():
 
         next_state = self.get_state(t)
         return next_state, reward
-
-    
-    def plot_packets(self):
-        plot.plot(np.arange(TIMESTEPS), self.operators[0].packet_distribution, label = self.operators[0].name)
-        plot.plot(np.arange(TIMESTEPS), self.operators[1].packet_distribution, label = self.operators[1].name)
-        plot.legend()
-        plot.title("Packet Distribution for Operator 1 and Operator 2")
-        plot.xlabel("Timestep (t)")
-        plot.ylabel("Number of Packets")
-        plot.savefig("sin2.png")
-        plot.show()

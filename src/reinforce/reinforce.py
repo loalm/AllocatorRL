@@ -8,6 +8,8 @@ import torch.nn.functional as F
 from torch.distributions.dirichlet import Dirichlet
 from itertools import count
 import matplotlib.pyplot as plot
+from src.Plotter.plotter import *
+
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
@@ -101,13 +103,14 @@ def main():
     
     REWARD_GOAL = 170_000
     goal_met = False
+    env.algorithm_name = "REINFORCE Algorithm"
 
     for i_episode in range(NUM_EPISODES):
         state = env.reset_state()
         ep_reward = 0
         #print("\n\n")
         for t in range(TIMESTEPS):
-            print(f"State: {state}")
+            #print(f"State: {state}")
             action = select_action(state)
             #print(f"t: {t} Action: {action}")
             state, reward = env.step(action, t)
@@ -127,13 +130,13 @@ def main():
 
     action_mem /= TIMESTEPS
 
-    plot.plot(np.arange(0, NUM_EPISODES, args.log_interval), running_reward)
-    plot.title('Average Reward per Training Episode')
-    plot.xlabel('Episode')
-    plot.ylabel('Running Reward [MB / s]')
-    plot.savefig('avg_reward.png')
-    plot.show()
-    plot.close()
+    # plot.plot(np.arange(0, NUM_EPISODES, args.log_interval), running_reward)
+    # plot.title('Average Reward per Training Episode')
+    # plot.xlabel('Episode')
+    # plot.ylabel('Running Reward [Mb / s]')
+    # plot.savefig('avg_reward.png')
+    # plot.show()
+    # plot.close()
 
     plot.plot(action_mem)
     plot.title('Average Spectrum % Allocated to Operator 1 per training Episode')
@@ -144,25 +147,22 @@ def main():
     plot.close()
 
 
-    plot.plot(env.operators[0].packet_distribution, label = env.operators[0].name)
-    plot.plot(env.operators[1].packet_distribution, label = env.operators[1].name)
-    plot.legend()
-    plot.title('Packet Distribution')
-    plot.xlabel('Timestep (t)')
-    plot.ylabel('Number of packets')
-    plot.savefig('packet_distribution.png')
-    plot.show()
-    plot.close()
+    # plot.plot(env.operators[0].packet_distribution, label = env.operators[0].name)
+    # plot.plot(env.operators[1].packet_distribution, label = env.operators[1].name)
+    # plot.legend()
+    # plot.title('Packet Distribution')
+    # plot.xlabel('Timestep (t)')
+    # plot.ylabel('Number of packets')
+    # plot.savefig('packet_distribution.png')
+    # plot.show()
+    # plot.close()
 
-    plot.plot(env.operators[0].request_arr, label = env.operators[0].name)
-    plot.plot(env.operators[1].request_arr, label = env.operators[1].name)
-    plot.legend()
-    plot.title('Request Distribution')
-    plot.xlabel('Timestep [t]')
-    plot.ylabel('Request size [MHz * s]')
-    plot.savefig('request_distribution.png')
-    plot.show()
-    plot.close()
+    plot_average_reward(env, args.log_interval, running_reward)
+
+    plot_packet_distribution(env)
+    plot_request_distribution(env)
+    plot_total_throughput(env)
+
 
 
 if __name__ == '__main__':

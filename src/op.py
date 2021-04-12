@@ -18,7 +18,7 @@ class Operator:
         else:
             self.packet_distribution = np.random.poisson(lam=self.lam,size=TIMESTEPS)
                     # TODO: This should be varying more
-        self.incoming_packets = [[Packet(step) for _ in range(self.packet_distribution[step])] 
+        self.incoming_packets = [[Packet(arrival_time=step*T_SLOT) for _ in range(self.packet_distribution[step])] 
                                     for step in range(TIMESTEPS)]
 
         self.packet_queue = queue.Queue()
@@ -26,6 +26,7 @@ class Operator:
         self.total_traffic_served = 0
         self.traffic_ema = np.zeros(TIMESTEPS+10000) # Exponential moving avg of traffic
         self.request_arr = []
+        self.throughput = [0]
 
     def schedule_packets(self, t):
         """
@@ -43,16 +44,19 @@ class Operator:
         for p in self.incoming_packets[t]:
             self.packet_queue.put(p)
         
-        t_remaining = T_SLOT 
+        t_remaining = T_SLOT
+
+        throughput_arr = []
 
         while t_remaining > 0 and not self.packet_queue.empty():
             p = self.packet_queue.get()
             t_send_p = p.size / (self.bandwidth * p.spectral_efficiency) # Time required to send whole packet p [s]
             if t_send_p <= t_remaining:
                 # Whole packet p is sent
-                p.t2 = t*T_SLOT # Set the time t2 when p was fully sent.
+                p.endtime = t_send_p + t*T_SLOT # Set the time t2 when p was fully sent. [s]
                 t_remaining -= t_send_p
                 traffic_served += p.size
+                throughput_arr.append(p.size / (p.endtime - p.arrival_time))
             else:
                 p_chunk = self.bandwidth * p.spectral_efficiency * t_remaining # The chunk of packet p that can be sent [bits]
                 p.size -= p_chunk
@@ -64,6 +68,7 @@ class Operator:
 
         self.calc_reward(traffic_served, t)
         self.calc_request(t+1)
+        self.calc_throughput(throughput_arr)
         return traffic_served
     
     def get_reward(self, t):
@@ -86,13 +91,15 @@ class Operator:
         return self.request
 
 
-    def throughput():
+    def calc_throughput(self, throughput_arr):
         """
         Cell-edge throughput
         size / (t2-t1)
         ## Mb/s
         5% Worst percentile maximize 
         """
+
+        self.throughput.append(sum(throughput_arr))
     
     def satisfied_traffic():
         """
