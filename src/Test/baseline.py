@@ -10,20 +10,23 @@ from itertools import count
 import matplotlib.pyplot as plot
 from src.Plotter.plotter import *
 
-parse = argparse.ArgumentParser(description='PyTorch baseline')
-parse.add_argument('--split', type=float, default=0.5, metavar='N')
-parse.add_argument('--log-interval', type=int, default=10, metavar='N',
+parser = argparse.ArgumentParser(description='PyTorch baseline')
+parser.add_argument('--split', type=float, default=0.5, metavar='N')
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
-args = parse.parse_args()
+parser.add_argument('--episodes', type=int, default=300, metavar='N',
+                    help='interval between training status logs (default: 10)')
+parser.add_argument('--show-plot', action='store_true', help='Show the plots')
+args = parser.parse_args()
 
-env = Environment()
 
-def baseline_softmax(episodes=100, bandwidth=None):
-    NUM_EPISODES = episodes
+def baseline_softmax(args, bandwidth=None):
+    episodes = args.episodes
     running_reward = []
-    avg_reward = 0.0
+    env = Environment()
     env.algorithm_name = f"Baseline Softmax Algorithm"
-    for i_episode in range(NUM_EPISODES):
+    interval_avg_reward = 0
+    for i_episode in range(episodes):
         state = env.reset_state()
         if bandwidth is not None:
             env.bandwidth = bandwidth
@@ -31,60 +34,67 @@ def baseline_softmax(episodes=100, bandwidth=None):
         for t in range(TIMESTEPS):
             state = torch.tensor(state, dtype=float)
             action = F.softmax(state)
-            state, reward = env.step(action, t)
+            _, reward = env.step(action, t)
             ep_reward += reward
 
-        avg_reward += ep_reward
+        interval_avg_reward += ep_reward
         if i_episode % args.log_interval == 0:
-            print(f'Episode {i_episode} \t Last reward: {ep_reward} \t Average reward: {running_reward}')
-            running_reward.append(ep_reward)
+            if i_episode != 0:
+                interval_avg_reward /= args.log_interval
+            print(f'Episode {i_episode} \t Last reward: {interval_avg_reward} \t Average reward: {running_reward}')
+            running_reward.append(interval_avg_reward)
+            interval_avg_reward = 0
 
-    avg_reward /= NUM_EPISODES
+    plot_5th_percentile_throughput(env, show_plot=args.show_plot)
+    plot_average_reward(env, args.log_interval, running_reward, show_plot=args.show_plot)
+    plot_packet_distribution(env, show_plot=args.show_plot)
+    plot_request_distribution(env, show_plot=args.show_plot)
+    plot_quality_served_traffic(env, show_plot=args.show_plot)
 
-    plot_average_reward(env, args.log_interval, running_reward)
-    plot_packet_distribution(env)
-    plot_request_distribution(env)
-    plot_total_throughput(env)
+    return running_reward, env
 
-    return avg_reward
 
-def baseline(episodes=500, bandwidth=None):
-    NUM_EPISODES = episodes
+def baseline(args, bandwidth=None, split=args.split):
+    episodes = args.episodes
     running_reward = []
-    avg_reward = 0.0
-    env.algorithm_name = f"Baseline {args.split} Algorithm"
-    for i_episode in range(NUM_EPISODES):
+    env = Environment()
+    env.algorithm_name = f"Baseline {split} Algorithm"
+    interval_avg_reward = 0
+    for i_episode in range(episodes):
         state = env.reset_state()
         if bandwidth is not None:
             env.bandwidth = bandwidth
         ep_reward = 0
         for t in range(TIMESTEPS):
-            action = [args.split, 1-args.split] # Split evenly
+            action = [split, 1-split] # Split evenly
             state, reward = env.step(action, t)
             ep_reward += reward
 
-        avg_reward += ep_reward
+        interval_avg_reward += ep_reward
         if i_episode % args.log_interval == 0:
+            if i_episode != 0:
+                interval_avg_reward /= args.log_interval
             #print(f'Episode {i_episode} \t Last reward: {ep_reward} \t Average reward: {running_reward}')
-            running_reward.append(ep_reward)
+            running_reward.append(interval_avg_reward)
+            interval_avg_reward = 0
 
-    avg_reward /= NUM_EPISODES
+    plot_5th_percentile_throughput(env, show_plot=args.show_plot)
+    plot_quality_served_traffic(env, show_plot=args.show_plot)
+    plot_average_reward(env, args.log_interval, running_reward, show_plot=args.show_plot)
+    plot_packet_distribution(env, show_plot=args.show_plot)
+    plot_request_distribution(env, show_plot=args.show_plot)
 
-    plot_average_reward(env, args.log_interval, running_reward)
-    plot_packet_distribution(env)
-    plot_request_distribution(env)
-    plot_total_throughput(env)
+    return running_reward, env
 
-    return avg_reward
+def spectrum_baseline(args):
 
-def spectrum_baseline():
-
-    spectrum = np.arange(0, 100, 10)
+    spectrum = np.arange(10, 100, 10)
     rewards = []
 
     for s in spectrum:
         print(f"Spectrum s: {s}")
-        rewards.append(baseline(episodes = 50, bandwidth = s))
+        reward, _ = baseline(args, bandwidth = s)
+        rewards.append(reward)
 
     print(rewards)
 
@@ -98,6 +108,6 @@ def spectrum_baseline():
 
 
 if __name__ == '__main__':
-    baseline_softmax()
-    #baseline()
-    #spectrum_baseline()
+    #baseline_softmax(args)
+    #baseline(args)
+    spectrum_baseline(args)

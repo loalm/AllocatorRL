@@ -9,18 +9,20 @@ from torch.distributions.dirichlet import Dirichlet
 from itertools import count
 import matplotlib.pyplot as plot
 from src.Plotter.plotter import *
+import math
 
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
-parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
+parser.add_argument('--gamma', type=float, default=0.90, metavar='G',
                     help='discount factor (default: 0.99)')
 parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 543)')
 #parser.add_argument('--render', action='store_true',
 #                    help='render the environment')
+parser.add_argument('--show-plot', action='store_true',
+                    help='Show the plots')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
-
 parser.add_argument('--episodes', type=int, default=500, metavar='N',
 help='Number of training episodes (default: 500)')
 args = parser.parse_args()
@@ -38,10 +40,10 @@ class Policy(nn.Module):
 
         self.net = nn.Sequential(
             nn.Softmax(dim = 0),
-            nn.Linear(2, 128),
-            nn.Dropout(p=0.6),
+            nn.Linear(2, 32),
+            #nn.Dropout(p=0.2),
             nn.ReLU(),
-            nn.Linear(128, 2),
+            nn.Linear(32, 2),
             nn.Softmax(dim = 0)
         )
 
@@ -59,7 +61,8 @@ class Policy(nn.Module):
         #return Variable(self.net(x),  requires_grad=True)
 
 policy = Policy()
-optimizer = optim.Adam(policy.parameters(), lr=1e-6) # TODO: Adjust learning rate
+# Best lr : 1e-2 = 0.01 ... 0.05
+optimizer = optim.Adam(policy.parameters(), lr=0.01) # TODO: Adjust learning rate
 eps = np.finfo(np.float32).eps.item()
 
 def select_action(state):
@@ -96,13 +99,13 @@ def finish_episode():
     del policy.saved_log_probs[:]
     #policy.saved_log_probs = Variable(torch.Tensor())
 
-def main():
+def main(args):
     NUM_EPISODES = args.episodes
     running_reward = []
+    interval_avg_reward = 0
+
     action_mem = np.array([0]*NUM_EPISODES, dtype='float')
     
-    REWARD_GOAL = 170_000
-    goal_met = False
     env.algorithm_name = "REINFORCE Algorithm"
 
     for i_episode in range(NUM_EPISODES):
@@ -112,23 +115,27 @@ def main():
         for t in range(TIMESTEPS):
             #print(f"State: {state}")
             action = select_action(state)
+            
             #print(f"t: {t} Action: {action}")
             state, reward = env.step(action, t)
             policy.rewards.append(reward)
             ep_reward += reward
-            action_mem[i_episode] += action[0]
-        
-        if ep_reward > REWARD_GOAL:
-            print("Goal met!")
-            goal_met = True
+            if i_episode == NUM_EPISODES - 1:
+                print(f"t: {t} Action: {action}")
+   
+            action_mem[i_episode] = action[0]
 
-        if not goal_met:
-            finish_episode()
+        interval_avg_reward += ep_reward
+        finish_episode()
         if i_episode % args.log_interval == 0:
-            print(f'Episode {i_episode} \t Last reward: {ep_reward} \t Average reward:')
-            running_reward.append(ep_reward)
+            if i_episode != 0:
+                interval_avg_reward /= args.log_interval
 
-    action_mem /= TIMESTEPS
+            print(f'Episode {i_episode} \t Last reward: {interval_avg_reward} ')
+            running_reward.append(interval_avg_reward)
+            interval_avg_reward = 0
+
+    #action_mem /= TIMESTEPS
 
     # plot.plot(np.arange(0, NUM_EPISODES, args.log_interval), running_reward)
     # plot.title('Average Reward per Training Episode')
@@ -143,7 +150,7 @@ def main():
     plot.xlabel('Episode (i_episode)')
     plot.ylabel('Spectrum %')
     plot.savefig('avg_allocation.png')
-    plot.show()
+    #plot.show()
     plot.close()
 
 
@@ -157,16 +164,16 @@ def main():
     # plot.show()
     # plot.close()
 
-    plot_average_reward(env, args.log_interval, running_reward)
+    plot_5th_percentile_throughput(env, show_plot=args.show_plot)
 
-    plot_packet_distribution(env)
-    plot_request_distribution(env)
-    plot_total_throughput(env)
+    plot_average_reward(env, args.log_interval, running_reward, show_plot=args.show_plot)
+    plot_packet_distribution(env, show_plot=args.show_plot)
+    plot_request_distribution(env, show_plot=args.show_plot)
+    plot_quality_served_traffic(env, show_plot=args.show_plot)
+
+    return running_reward, env
 
 
 
 if __name__ == '__main__':
-    main()
-
-
-
+    main(args)

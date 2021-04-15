@@ -26,7 +26,8 @@ class Operator:
         self.total_traffic_served = 0
         self.traffic_ema = np.zeros(TIMESTEPS+10000) # Exponential moving avg of traffic
         self.request_arr = []
-        self.throughput = [0]
+        self.quality_served_traffic = np.zeros(TIMESTEPS)
+        self.five_percentile_throughput = np.zeros(TIMESTEPS)
 
     def schedule_packets(self, t):
         """
@@ -46,29 +47,34 @@ class Operator:
         
         t_remaining = T_SLOT
 
-        throughput_arr = []
+        self.throughput_arr = []
 
         while t_remaining > 0 and not self.packet_queue.empty():
             p = self.packet_queue.get()
             t_send_p = p.size / (self.bandwidth * p.spectral_efficiency) # Time required to send whole packet p [s]
             if t_send_p <= t_remaining:
                 # Whole packet p is sent
-                p.endtime = t_send_p + t*T_SLOT # Set the time t2 when p was fully sent. [s]
+                p.endtime = t*T_SLOT + t_send_p # Set the time t2 when p was fully sent. [s]
                 t_remaining -= t_send_p
                 traffic_served += p.size
-                throughput_arr.append(p.size / (p.endtime - p.arrival_time))
+                #print(f"Whole: {p.size}")
+                self.throughput_arr.append(p.size / (p.endtime - p.arrival_time)) # [Mb / s]
             else:
                 p_chunk = self.bandwidth * p.spectral_efficiency * t_remaining # The chunk of packet p that can be sent [bits]
+                #print(f"Chunk: {p_chunk}")
                 p.size -= p_chunk
                 self.packet_queue.put(p) # Cannot send whole packet p during timestep t.
-                t_remaining = 0
                 traffic_served += p_chunk
+                chunk_endtime = t*T_SLOT + t_remaining
+                self.throughput_arr.append(p_chunk / (chunk_endtime - p.arrival_time)) # [Mb / s]
+                t_remaining = 0
                 break
+
         traffic_served /= T_SLOT # Divide by T_SLOT to get [bits / s]
 
         self.calc_reward(traffic_served, t)
         self.calc_request(t+1)
-        self.calc_throughput(throughput_arr)
+        self.calc_quality_served_traffic(t)
         return traffic_served
     
     def get_reward(self, t):
@@ -90,20 +96,9 @@ class Operator:
         """
         return self.request
 
-
-    def calc_throughput(self, throughput_arr):
+    def calc_quality_served_traffic(self, t):
         """
-        Cell-edge throughput
-        size / (t2-t1)
-        ## Mb/s
-        5% Worst percentile maximize 
-        """
-
-        self.throughput.append(sum(throughput_arr))
-    
-    def satisfied_traffic():
-        """
-        if 5% percentile satisified (> 1Mb/s):
+        if 5% percentile throughput (> 1Mb/s):
             return traffic_served
         else
             return 0
@@ -112,6 +107,27 @@ class Operator:
             0-20 B/s/Hz Spectral Efficiency
             1MB = 1*8Mb packet size
         """
+        # print(f"t: {t}", self.throughput_arr)
+        if not self.throughput_arr:
+            five_percentile_throughput = 0
+        else:
+            five_percentile_throughput = np.percentile(self.throughput_arr, 5)
+
+        if five_percentile_throughput > 1:
+            self.quality_served_traffic[t] = self.traffic_ema[t]
+        else:
+            self.quality_served_traffic[t] = -100
+        
+        self.five_percentile_throughput[t] = five_percentile_throughput
+    
+    def get_quality_served_traffic(self, t):
+        return self.quality_served_traffic[t]
+
+
+    # if throughtput > threshold:
+        #reward = 1/Spectrum
+    # else:
+        #reward = 0
 
 
     def calc_reward(self, traffic_served, t):
@@ -147,11 +163,11 @@ class Operator:
         t = t % TIMESTEPS
 
         self.request = 0
-        #for tt in range(t, (t+10) % TIMESTEPS):
+        # for tt in range(t, (t+10) % TIMESTEPS):
         #    self.request = sum([p.size / p.spectral_efficiency for p in self.incoming_packets[tt]])
 
-        self.request = sum([p.size / p.spectral_efficiency for p in self.incoming_packets[t]])
-        self.request += sum([p.size / p.spectral_efficiency for p in self.packet_queue.queue])
+        #self.request = sum([p.size / p.spectral_efficiency for p in self.incoming_packets[t]])
+        self.request += sum([p.size / p.spectral_efficiency for p in self.packet_queue.queue]) 
 
         self.request_arr.append(self.request)
         #print(f'Calc_request: {self.m}')
