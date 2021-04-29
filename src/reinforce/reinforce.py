@@ -13,7 +13,7 @@ import math
 
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
-parser.add_argument('--gamma', type=float, default=0.90, metavar='G',
+parser.add_argument('--gamma', type=float, default=0.99, metavar='G', 
                     help='discount factor (default: 0.99)')
 parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 543)')
@@ -39,12 +39,9 @@ class Policy(nn.Module):
         self.rewards = []
 
         self.net = nn.Sequential(
-            nn.Softmax(dim = 0),
-            nn.Linear(2, 32),
-            #nn.Dropout(p=0.2),
-            nn.ReLU(),
-            nn.Linear(32, 2),
-            nn.Softmax(dim = 0)
+            # nn.Softmax(dim = 0),
+            nn.Linear(4, 2),
+            nn.Softplus()
         )
 
     def forward(self, x):
@@ -62,7 +59,8 @@ class Policy(nn.Module):
 
 policy = Policy()
 # Best lr : 1e-2 = 0.01 ... 0.05
-optimizer = optim.Adam(policy.parameters(), lr=0.01) # TODO: Adjust learning rate
+optimizer = optim.Adam(policy.parameters(), lr=0.001) # TODO: Adjust learning rate
+# optimizer = optim.SGD(policy.parameters(), lr=0.0001, momentum=0.99)
 eps = np.finfo(np.float32).eps.item()
 
 def select_action(state):
@@ -70,11 +68,11 @@ def select_action(state):
     #print(f"RETURNS state: {state}")
     #out = policy(Variable(state))
     out = policy(state)
-    #print(f"Out: {out}")
+    #print(f"Out: {out+eps}")
     d = Dirichlet(out+eps) # Add epsilon to make sure no out value is equal to Dirichlet lowerbound 0.
     action = d.sample()
+    # print(f"action: {action}")
     #print(f"RETURNS log prob: {d.log_prob(action)}")
-
     policy.saved_log_probs.append(d.log_prob(action))
     return action.squeeze(0).numpy()
 
@@ -84,13 +82,15 @@ def finish_episode():
     returns = []
     for r in policy.rewards[::-1]:
         R = r + args.gamma * R
+        R = -R
         returns.insert(0, R)
     returns = torch.tensor(returns)
     returns = (returns - returns.mean()) / (returns.std() + eps)
-    #print(f'Saved_log_probs {policy.saved_log_probs}')
     for log_prob, R in zip(policy.saved_log_probs, returns):
-       policy_loss.append(-log_prob * R)
-
+        # print(R)
+        policy_loss.append(-log_prob * R)
+    
+    # print(f'policy_loss {policy_loss} \n')
     policy_loss = torch.stack(policy_loss).sum()
     optimizer.zero_grad()
     policy_loss.backward()
@@ -99,14 +99,20 @@ def finish_episode():
     del policy.saved_log_probs[:]
     #policy.saved_log_probs = Variable(torch.Tensor())
 
-def main(args):
+def main(args, bandwidth=None):
+    if bandwidth:
+        env.bandwidth = bandwidth
     NUM_EPISODES = args.episodes
     running_reward = []
     interval_avg_reward = 0
 
-    action_mem = np.array([0]*NUM_EPISODES, dtype='float')
+    action_timestep = np.array([0]*TIMESTEPS, dtype='float')
     
-    env.algorithm_name = "REINFORCE Algorithm"
+    env.algorithm_name = "REINFORCE"
+    print(f"Running {env.algorithm_name}")
+
+    util_sum = np.zeros((2, NUM_EPISODES))
+    reward_timestep = np.zeros(TIMESTEPS)
 
     for i_episode in range(NUM_EPISODES):
         state = env.reset_state()
@@ -114,58 +120,69 @@ def main(args):
         #print("\n\n")
         for t in range(TIMESTEPS):
             #print(f"State: {state}")
-            action = select_action(state)
-            
+            if np.random.rand() < 0.99:
+                action = select_action(state)
+            else:
+                x = np.random.rand()
+                action = [x, 1-x]
             #print(f"t: {t} Action: {action}")
+            action = action[:2] # Test
             state, reward = env.step(action, t)
             policy.rewards.append(reward)
             ep_reward += reward
             if i_episode == NUM_EPISODES - 1:
                 print(f"t: {t} Action: {action}")
-   
-            action_mem[i_episode] = action[0]
+                reward_timestep[t] = reward
+                action_timestep[t] = action[0]
 
-        interval_avg_reward += ep_reward
         finish_episode()
+
+        util_sum[0][i_episode] = sum(env.operators[0].utilisation)
+        util_sum[1][i_episode] = sum(env.operators[1].utilisation)
+        interval_avg_reward += ep_reward
         if i_episode % args.log_interval == 0:
             if i_episode != 0:
-                interval_avg_reward /= args.log_interval
+                interval_avg_reward /= args.log_interval    
+
 
             print(f'Episode {i_episode} \t Last reward: {interval_avg_reward} ')
             running_reward.append(interval_avg_reward)
             interval_avg_reward = 0
 
-    #action_mem /= TIMESTEPS
+    util_sum[0] = (util_sum[0] / TIMESTEPS) * 100
+    util_sum[1] = (util_sum[1] / TIMESTEPS) * 100
 
-    # plot.plot(np.arange(0, NUM_EPISODES, args.log_interval), running_reward)
-    # plot.title('Average Reward per Training Episode')
-    # plot.xlabel('Episode')
-    # plot.ylabel('Running Reward [Mb / s]')
-    # plot.savefig('avg_reward.png')
+    # plot.plot(reward_timestep)
+    # # plot.legend()
+    # plot.title(f'Reward at timestep t with {env.algorithm_name}')
+    # plot.xlabel('Timestep t')
+    # plot.ylabel('Reward [Mb / s]')
+    # plot.savefig(f'Reward_Timestep{env.algorithm_name}_BW{env.bandwidth}_TS{TIMESTEPS}.png')
     # plot.show()
     # plot.close()
 
-    plot.plot(action_mem)
-    plot.title('Average Spectrum % Allocated to Operator 1 per training Episode')
+
+    plot.plot(util_sum[0], label = env.operators[0].name)
+    plot.plot(util_sum[1], label = env.operators[1].name)
+    plot.legend()
+    plot.title(f'Time Utilization per episode with {env.algorithm_name}')
     plot.xlabel('Episode (i_episode)')
+    plot.ylabel('Utilization [%]')
+    plot.savefig(f'Time_Utilization_{env.algorithm_name}_BW{env.bandwidth}_TS{TIMESTEPS}.png')
+    #plot.show()
+    plot.close()
+
+    plot.plot(action_timestep)
+    plot.title('Average Spectrum % Allocated to Operator 1 during final episode')
+    plot.xlabel('Timestep')
     plot.ylabel('Spectrum %')
     plot.savefig('avg_allocation.png')
     #plot.show()
     plot.close()
 
-
-    # plot.plot(env.operators[0].packet_distribution, label = env.operators[0].name)
-    # plot.plot(env.operators[1].packet_distribution, label = env.operators[1].name)
-    # plot.legend()
-    # plot.title('Packet Distribution')
-    # plot.xlabel('Timestep (t)')
-    # plot.ylabel('Number of packets')
-    # plot.savefig('packet_distribution.png')
-    # plot.show()
-    # plot.close()
-
+    plot_action_timestep(env, action_timestep, show_plot=args.show_plot)
+    plot_reward_timestep(env, reward_timestep, show_plot=args.show_plot)
     plot_5th_percentile_throughput(env, show_plot=args.show_plot)
-
     plot_average_reward(env, args.log_interval, running_reward, show_plot=args.show_plot)
     plot_packet_distribution(env, show_plot=args.show_plot)
     plot_request_distribution(env, show_plot=args.show_plot)

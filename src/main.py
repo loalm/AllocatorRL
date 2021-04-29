@@ -1,8 +1,10 @@
 import argparse
-from src.Reinforce import reinforce
-from src.Test.baseline import baseline, baseline_softmax
+from src.Reinforce import reinforce, actor_critic
+from src.Plotter.plotter import BASE_DIR
+from src.Test.baseline import baseline, baseline_tpmax
 import matplotlib.pyplot as plot
 import numpy as np
+from src.constants import TIMESTEPS
 
 
 
@@ -21,24 +23,68 @@ parser.add_argument('--episodes', type=int, default=500, metavar='N',
 help='Number of training episodes (default: 500)')
 args = parser.parse_args()
 
+def main_spectrumtest():
+
+    spectrum = np.arange(25, 60, 5)
+    rewards = {}
+    for s in spectrum:
+        print(f'Spectrum: {s}')
+        reward_env = [
+                      reinforce.main(args, bandwidth=s),
+                    #   actor_critic.main(args, bandwidth=s), 
+                      baseline(args, bandwidth=s),
+                    #   baseline_tpmax(args, bandwidth=s),
+                    #   baseline(args, split=0.1, bandwidth=s),
+                    #   baseline(args, split=0.9, bandwidth=s)
+                    ]
+
+        for (reward, env) in reward_env:
+            reward = max(reward)
+            if env.algorithm_name not in rewards:
+                rewards[env.algorithm_name] = [reward]
+            else:
+                rewards[env.algorithm_name].append(reward)
+    
+    print(rewards)
+    for algo, reward in rewards.items():
+        plot.plot(spectrum, reward, label = algo)
+
+    plot.legend()
+    plot.suptitle("Reward (Quality Spectral Efficiency)")
+    #plot.title(f"Allocator Bandwidth: {env1.bandwidth} MHz Timesteps: {TIMESTEPS}", fontsize=10)
+    plot.xlabel('Bandwidth [MHz]')
+    plot.ylabel('Reward [Mb / s / Hz]')
+    img_name = BASE_DIR+f"RewardAtBandWidth_all.png".replace(" ", "")
+    plot.savefig(img_name)
+    plot.show()
+    plot.close()
+
 
 def main():
     reinforce_reward, env1 = reinforce.main(args)
     baseline_reward, env2 = baseline(args)
-    baseline_softmax_reward, env3 = baseline_softmax(args)
+    baseline_softmax_reward, env3 = baseline_tpmax(args)
     baseline_skewed_reward, env4 = baseline(args, split=0.1)
+    baseline_skewed_reward2, env5 = baseline(args, split=0.9)
+    # ac_reward, env6 = actor_critic.main(args)
+
     env4.algorithm_name = "Baseline skewed 0.1/0.9"
+    env5.algorithm_name = "Baseline skewed 0.9/0.1"
 
     episode_intervals = np.arange(0, args.episodes, args.log_interval)
     plot.plot(episode_intervals, reinforce_reward, label = env1.algorithm_name)
     plot.plot(episode_intervals, baseline_reward, label = env2.algorithm_name)
     plot.plot(episode_intervals, baseline_softmax_reward, label = env3.algorithm_name)
     plot.plot(episode_intervals, baseline_skewed_reward, label = env4.algorithm_name)
+    plot.plot(episode_intervals, baseline_skewed_reward2, label = env5.algorithm_name)
+    # plot.plot(episode_intervals, ac_reward, label = env6.algorithm_name)
+
     plot.legend()
-    plot.title(f'Average Reward (Quality Traffic Served)')
+    plot.suptitle("Reward (Quality Traffic Served)")
+    plot.title(f"Allocator Bandwidth: {env1.bandwidth} MHz Timesteps: {TIMESTEPS}", fontsize=10)
     plot.xlabel('Episode')
     plot.ylabel('Reward [Mb / s]')
-    img_name = f"AverageRewardQTS_all.png".replace(" ", "")
+    img_name = BASE_DIR+f"AverageRewardQTS_all_BW{env1.bandwidth}_TS{TIMESTEPS}.png".replace(" ", "")
     plot.savefig(img_name)
     plot.show()
     plot.close()
@@ -46,4 +92,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    main_spectrumtest()
