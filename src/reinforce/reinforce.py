@@ -13,7 +13,7 @@ import math
 
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
-parser.add_argument('--gamma', type=float, default=0.99, metavar='G', 
+parser.add_argument('--gamma', type=float, default=0.02, metavar='G', 
                     help='discount factor (default: 0.99)')
 parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 543)')
@@ -45,21 +45,12 @@ class Policy(nn.Module):
         )
 
     def forward(self, x):
-        # x = self.affine1(x)
-        # x = self.dropout(x)
-        # x = F.relu(x)
-        # action_scores = self.affine2(x)
-        # return F.softmax(action_scores.clone(), dim=1)
-        x = self.net(x)
-        #x = torch.exp(x)
-        #x = F.log_softmax(x)
-        return x
-        #return self.net(x)
-        #return Variable(self.net(x),  requires_grad=True)
+        return self.net(x)
+
 
 policy = Policy()
 # Best lr : 1e-2 = 0.01 ... 0.05
-optimizer = optim.Adam(policy.parameters(), lr=0.001) # TODO: Adjust learning rate
+optimizer = optim.Adam(policy.parameters(), lr=0.005) # TODO: Adjust learning rate
 # optimizer = optim.SGD(policy.parameters(), lr=0.0001, momentum=0.99)
 eps = np.finfo(np.float32).eps.item()
 
@@ -82,7 +73,7 @@ def finish_episode():
     returns = []
     for r in policy.rewards[::-1]:
         R = r + args.gamma * R
-        R = -R
+        # R = -R
         returns.insert(0, R)
     returns = torch.tensor(returns)
     returns = (returns - returns.mean()) / (returns.std() + eps)
@@ -120,7 +111,7 @@ def main(args, bandwidth=None):
         #print("\n\n")
         for t in range(TIMESTEPS):
             #print(f"State: {state}")
-            if np.random.rand() < 0.99:
+            if np.random.rand() < 1:
                 action = select_action(state)
             else:
                 x = np.random.rand()
@@ -129,6 +120,7 @@ def main(args, bandwidth=None):
             action = action[:2] # Test
             state, reward = env.step(action, t)
             policy.rewards.append(reward)
+            reward = math.exp(reward)
             ep_reward += reward
             if i_episode == NUM_EPISODES - 1:
                 print(f"t: {t} Action: {action}")

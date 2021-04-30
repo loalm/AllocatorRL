@@ -25,7 +25,7 @@ args = parser.parse_args()
 
 def main_spectrumtest():
 
-    spectrum = np.arange(25, 60, 5)
+    spectrum = np.arange(210, 250, 5)
     rewards = {}
     for s in spectrum:
         print(f'Spectrum: {s}')
@@ -39,21 +39,24 @@ def main_spectrumtest():
                     ]
 
         for (reward, env) in reward_env:
-            reward = max(reward)
+            if env.algorithm_name == 'Baseline 0.5':
+                reward = sum(reward)/len(reward)
+            else:
+                reward = max(reward)
             if env.algorithm_name not in rewards:
                 rewards[env.algorithm_name] = [reward]
             else:
                 rewards[env.algorithm_name].append(reward)
     
-    print(rewards)
+        print(rewards)
     for algo, reward in rewards.items():
         plot.plot(spectrum, reward, label = algo)
 
     plot.legend()
-    plot.suptitle("Reward (Quality Spectral Efficiency)")
+    plot.suptitle("Reward (Quality Served Traffic)")
     #plot.title(f"Allocator Bandwidth: {env1.bandwidth} MHz Timesteps: {TIMESTEPS}", fontsize=10)
     plot.xlabel('Bandwidth [MHz]')
-    plot.ylabel('Reward [Mb / s / Hz]')
+    plot.ylabel('Reward [Mb / s]')
     img_name = BASE_DIR+f"RewardAtBandWidth_all.png".replace(" ", "")
     plot.savefig(img_name)
     plot.show()

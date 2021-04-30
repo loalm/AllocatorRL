@@ -137,7 +137,7 @@ class Operator:
         if not self.throughput_arr:
             five_percentile_throughput = 0
         else:
-            five_percentile_throughput = np.percentile(self.throughput_arr, 5)
+            five_percentile_throughput = np.percentile(self.throughput_arr, 10)
 
         #print(f"t: {t} {self.name} 5TP: {five_percentile_throughput}")
         if five_percentile_throughput > 1:
@@ -197,6 +197,16 @@ class Operator:
         # else:
         self.request = sum([p.size / (p.spectral_efficiency) for p in self.packet_queue.queue])
     
+        # [MHz * s]
+        # o1 request : 18
+        # o2 request : 16 
+        # total bw: 30
+        # Baseline 0.5
+        # o1 gets 15 Mhz
+        # o1 gets 15 MHz
+
+
+
 
         if t+1 != TIMESTEPS:
             self.request += sum([p.size / p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
@@ -208,7 +218,15 @@ class Operator:
         # if 0 < t and t < 300:
         #     print(f't: {t} op: {self.name} tp: {self.five_percentile_throughput[t]}')
         # self.request = 1 / (1+self.five_percentile_throughput[t])
+        value_t = self.request
+        n = min(t,5)
+        k = (2/(1+n))
+        if t == 0:
+            self.request = value_t
+        else:
+            self.request = value_t * k + self.request_arr[(t-1)] * (1 - k)
         self.request_arr.append(self.request)
+
         # if self.five_percentile_throughput[t] < 1:
         #     print("BAD!")
         # print(f't: {t} {self.name}  tp : {self.five_percentile_throughput[t]}')

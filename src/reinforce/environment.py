@@ -81,8 +81,8 @@ class Environment():
         # self.operators = [Operator(f"Operator {i+1}", packet_distributions[i])
         #                   for i in range(n_operators)]
         x = np.linspace(-np.pi, np.pi, RUNTIME)
-        arrival_rates1 = (np.sin(x)*70).astype(int) + 130
-        arrival_rates2 = (np.sin(x+np.pi*3/4)*70).astype(int) + 130
+        arrival_rates1 = (np.sin(x)*70).astype(int) + 900
+        arrival_rates2 = (np.sin(x+np.pi*3/4)*70).astype(int) + 900
 
        
         # Create the operators
@@ -102,13 +102,11 @@ class Environment():
             return 0
         """
         five_percentile_throughputs = [np.percentile(o.throughput_arr, 5) for o in self.operators]
-        #print(f"t: {t} five_percet_tps: {five_percentile_throughputs}")
         traffic_sum = sum([o.traffic_ema[t] for o in self.operators])
         if all(tp > 1 for tp in five_percentile_throughputs):
-            return traffic_sum
+            return math.log(traffic_sum)#traffic_sum 
         else:
-            return 0#traffic_sum / 5# min(five_percentile_throughputs)
-        # return 1/(1+abs(five_percentile_throughputs[0] - five_percentile_throughputs[1]))
+            return 0#0#traffic_sum / 5# min(five_percentile_throughputs)
         
         
 
@@ -122,12 +120,9 @@ class Environment():
             return [s1, s2] 
 
         spectrum = action_to_spectrum(action)
-        reward = 0
         for i, operator in enumerate(self.operators):
             operator.bandwidth += spectrum[i]
             operator.schedule_packets(t)
-            # reward += operator.get_reward(t)
-            # reward += operator.get_quality_served_traffic(t)
             operator.bandwidth -= spectrum[i]
 
         reward = self.calc_quality_served_traffic(t)

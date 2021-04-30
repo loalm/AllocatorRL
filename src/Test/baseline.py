@@ -9,6 +9,7 @@ from torch.distributions.dirichlet import Dirichlet
 from itertools import count
 import matplotlib.pyplot as plot
 from src.Plotter.plotter import *
+import math
 
 parser = argparse.ArgumentParser(description='PyTorch baseline')
 parser.add_argument('--split', type=float, default=0.5, metavar='N')
@@ -34,7 +35,7 @@ def baseline_tpmax(args, bandwidth=None):
             env.bandwidth = bandwidth
         ep_reward = 0
         for t in range(TIMESTEPS):
-            [r1, r2] = state
+            # [r1, r2] = state
             [o1, o2] = env.operators
             # [r1, r2] = [o1.request, o2.request]
             # print(f"arr1: {state}")
@@ -86,8 +87,11 @@ def baseline(args, bandwidth=None, split=args.split):
         for t in range(TIMESTEPS):
             action = [split, 1-split] # Split evenly
             state, reward = env.step(action, t)
+            ####
+            reward = math.exp(reward)
+            ####
             ep_reward += reward
-
+            
         interval_avg_reward += ep_reward
         util_sum[0][i_episode] = sum(env.operators[0].utilisation)
         util_sum[1][i_episode] = sum(env.operators[1].utilisation)
