@@ -13,7 +13,7 @@ import math
 
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
-parser.add_argument('--gamma', type=float, default=0.02, metavar='G', 
+parser.add_argument('--gamma', type=float, default=0.03, metavar='G', 
                     help='discount factor (default: 0.99)')
 parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 543)')
@@ -50,7 +50,7 @@ class Policy(nn.Module):
 
 policy = Policy()
 # Best lr : 1e-2 = 0.01 ... 0.05
-optimizer = optim.Adam(policy.parameters(), lr=0.005) # TODO: Adjust learning rate
+optimizer = optim.Adam(policy.parameters(), lr=0.0005) # TODO: Adjust learning rate
 # optimizer = optim.SGD(policy.parameters(), lr=0.0001, momentum=0.99)
 eps = np.finfo(np.float32).eps.item()
 
@@ -81,7 +81,7 @@ def finish_episode():
         # print(R)
         policy_loss.append(-log_prob * R)
     
-    # print(f'policy_loss {policy_loss} \n')
+   # print(f'policy_loss {policy_loss} \n')
     policy_loss = torch.stack(policy_loss).sum()
     optimizer.zero_grad()
     policy_loss.backward()
@@ -104,14 +104,14 @@ def main(args, bandwidth=None):
 
     util_sum = np.zeros((2, NUM_EPISODES))
     reward_timestep = np.zeros(TIMESTEPS)
-
+    eta = 0.8
     for i_episode in range(NUM_EPISODES):
         state = env.reset_state()
         ep_reward = 0
         #print("\n\n")
         for t in range(TIMESTEPS):
             #print(f"State: {state}")
-            if np.random.rand() < 1:
+            if np.random.rand() < eta:
                 action = select_action(state)
             else:
                 x = np.random.rand()
@@ -126,8 +126,9 @@ def main(args, bandwidth=None):
                 print(f"t: {t} Action: {action}")
                 reward_timestep[t] = reward
                 action_timestep[t] = action[0]
-
         finish_episode()
+        eta /= 0.95
+        #print(eta)
 
         util_sum[0][i_episode] = sum(env.operators[0].utilisation)
         util_sum[1][i_episode] = sum(env.operators[1].utilisation)

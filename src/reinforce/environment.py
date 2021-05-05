@@ -81,14 +81,14 @@ class Environment():
         # self.operators = [Operator(f"Operator {i+1}", packet_distributions[i])
         #                   for i in range(n_operators)]
         x = np.linspace(-np.pi, np.pi, RUNTIME)
-        arrival_rates1 = (np.sin(x)*70).astype(int) + 900
-        arrival_rates2 = (np.sin(x+np.pi*3/4)*70).astype(int) + 900
+        arrival_rates1 = (np.sin(x)*70).astype(int) + 1500
+        arrival_rates2 = (np.sin(x+np.pi*3/4)*70).astype(int) + 1500
 
        
         # Create the operators
         self.operators = [Operator("Operator 1", arrival_rates1), 
                           Operator("Operator 2", arrival_rates2)]
-        # plot_packet_distribution(self, show_plot=True)
+        #plot_packet_distribution(self, show_plot=True);exit()
 
         return self.get_state()
 

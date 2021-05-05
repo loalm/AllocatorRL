@@ -17,14 +17,16 @@ class Operator:
         self.packets_at_timestep = [[] for t in range(TIMESTEPS)]
         packets = []
         for s in range(RUNTIME):
-            arrival_rate = arrival_rates[s]#np.random.poisson(lam=arrival_rates[s],size=1)[0]
+            arrival_rate = np.random.poisson(lam=arrival_rates[s],size=1)[0]
             tt = np.linspace(0,1,arrival_rate)
-            packets.extend([Packet(arrival_time=s + tt[p]- 0.01)
-                             for p in range(arrival_rate)])
+            # packets.extend([Packet(arrival_time=s + tt[p]- 0.01)
+            #                 for p in range(arrival_rate)])
+            packets.extend([Packet(arrival_time=s + tt[p] - np.random.rand()*0.01- 0.01)
+                            for p in range(arrival_rate)])
 
         for p in packets:
             timestep = int(p.arrival_time // T_SLOT)
-            self.packets_at_timestep[timestep].append(p)
+            self.packets_at_timestep[timestep ].append(p)
 
         for t in range(TIMESTEPS):
             self.packets_at_timestep[t].sort(key=lambda p: p.arrival_time)
@@ -45,6 +47,7 @@ class Operator:
         self.quality_served_traffic = np.zeros(TIMESTEPS)
         self.five_percentile_throughput = np.zeros(TIMESTEPS)
         self.utilisation = np.zeros(TIMESTEPS)
+        self.throughput_arr = []
 
     def schedule_packets(self, t):
         """
@@ -137,13 +140,13 @@ class Operator:
         if not self.throughput_arr:
             five_percentile_throughput = 0
         else:
-            five_percentile_throughput = np.percentile(self.throughput_arr, 10)
+            five_percentile_throughput = np.percentile(self.throughput_arr, 5)
 
         #print(f"t: {t} {self.name} 5TP: {five_percentile_throughput}")
         if five_percentile_throughput > 1:
             self.quality_served_traffic[t] = self.traffic_ema[t]
         else:
-            self.quality_served_traffic[t] = self.traffic_ema[t]/2 #0 #-100
+            self.quality_served_traffic[t] = 0#self.traffic_ema[t]/2 #0 #-100
         
         self.five_percentile_throughput[t] = five_percentile_throughput
     

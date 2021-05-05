@@ -25,7 +25,7 @@ args = parser.parse_args()
 
 def main_spectrumtest():
 
-    spectrum = np.arange(210, 250, 5)
+    spectrum = np.arange(360, 400, 10)
     rewards = {}
     for s in spectrum:
         print(f'Spectrum: {s}')
