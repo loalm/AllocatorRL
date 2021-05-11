@@ -20,9 +20,78 @@ parser.add_argument('--episodes', type=int, default=300, metavar='N',
 parser.add_argument('--show-plot', action='store_true', help='Show the plots')
 args = parser.parse_args()
 
+def baseline_weighted(args, bandwidth=None):
+    episodes = 50#args.episodes
+    running_reward = []
+    env = Environment()
+    env.algorithm_name = f"Baseline WeightedRequest"
+    print(f"Running {env.algorithm_name}")
+
+    action_timestep = np.array([0]*TIMESTEPS, dtype='float')
+
+
+    interval_avg_reward = 0
+    for i_episode in range(episodes):
+        state = env.reset_state()
+        if bandwidth is not None:
+            env.bandwidth = bandwidth
+        ep_reward = 0
+        for t in range(TIMESTEPS):
+            # [r1, r2] = state
+            [o1, o2] = env.operators
+            # [r1, r2] = [o1.request, o2.request]
+            # print(f"arr1: {state}")
+            # print(f"arr2: {[o1.request, o2.request]}")
+            requests = []
+            n_datapoints = 5
+            if t > n_datapoints:
+                x = [*range(t-n_datapoints,t)]
+                y = [np.array(o.request_arr)[x] for o in env.operators]
+                request_polyfits = [np.polyfit(x, y[i], deg=2) for i, _ in enumerate(env.operators)]
+                request_polyvals = [np.polyval(request_polyfits[i], t) for i, _ in enumerate(env.operators)]
+                requests = request_polyvals
+            else:
+                requests = [o.request for o in env.operators]   
+           
+            if all([val == 0 for val in requests]):
+                action = [.5]*len(env.operators)
+            else:
+                summ = sum(requests)
+                action = [requests[i] / summ for i, _ in enumerate(env.operators)]
+
+            # state = torch.tensor(state, dtype=float)
+            # action = F.softmax(state)
+            state, reward = env.step(action, t)
+
+            # reward = math.exp(reward)
+
+
+            ep_reward += reward
+            if i_episode == episodes - 1:
+                print(f"t: {t} Action: {action}")
+                action_timestep[t] = action[0]
+
+        interval_avg_reward += ep_reward
+        if i_episode % args.log_interval == 0:
+            if i_episode != 0:
+                interval_avg_reward /= args.log_interval
+            print(f'Episode {i_episode} \t Last reward: {interval_avg_reward} \t Average reward: {running_reward}')
+            running_reward.append(interval_avg_reward)
+            interval_avg_reward = 0
+    
+    
+    plot_action_timestep(env, action_timestep, show_plot=args.show_plot)
+    plot_5th_percentile_throughput(env, show_plot=args.show_plot)
+    plot_average_reward(env, args.log_interval, running_reward, show_plot=args.show_plot)
+    plot_packet_distribution(env, show_plot=args.show_plot)
+    plot_request_distribution(env, show_plot=args.show_plot)
+    plot_quality_served_traffic(env, show_plot=args.show_plot)
+
+    return running_reward, env
+
 
 def baseline_tpmax(args, bandwidth=None):
-    episodes = args.episodes
+    episodes = 50#args.episodes
     running_reward = []
     env = Environment()
     env.algorithm_name = f"Baseline TPMAX"
@@ -49,6 +118,9 @@ def baseline_tpmax(args, bandwidth=None):
             # state = torch.tensor(state, dtype=float)
             # action = F.softmax(state)
             state, reward = env.step(action, t)
+
+            # reward = math.exp(reward)
+
             ep_reward += reward
 
         interval_avg_reward += ep_reward
