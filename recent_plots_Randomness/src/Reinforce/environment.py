@@ -1,5 +1,5 @@
 from src.op import Operator
-from src.constants import TIMESTEPS
+from src.constants import *
 import matplotlib.pyplot as plot
 import torch
 import torch.nn.functional as F
@@ -8,6 +8,7 @@ from typing import Iterator, List, Optional, Tuple, TypeVar
 from src.Plotter.plotter import *
 import math
 from src.packet import Packet
+import time
 
 
 class Environment():
@@ -23,72 +24,27 @@ class Environment():
         Currently the state is simply the requests from the operators.
         """
         [o1, o2] = self.operators
-
-        # q1 = list(o1.packet_queue.queue)[:10]
-        # q2 = list(o2.packet_queue.queue)[:10]
-        # packets_eff = [p.arrival_time / p.spectral_efficiency  for p in q1]
-        # packets_eff.extend(0 for _ in range(10-len(q1)))
-        # packets_eff.extend([p.size/p.spectral_efficiency for p in q1])
-        # packets_eff.extend(0 for _ in range(10-len(q1)))
-        
-        # requests = np.array(packets_eff)
-
         requests = [
                     o1.request,
                     o2.request,
                     o1.five_percentile_throughput[t],
                     o2.five_percentile_throughput[t],
                     ]
-
-        # print([o1.five_percentile_throughput[t], o2.five_percentile_throughput[t]])
-
-        # if o1.five_percentile_throughput[t] == o2.five_percentile_throughput[t]:
-        #     requests = [.5,.5]
-        # elif o1.five_percentile_throughput[t] > o2.five_percentile_throughput[t]:
-        #     requests = [0.4,0.7]
-        # else:
-        #     requests = [0.7,0.4]
-        # requests = [o1.five_percentile_throughput[t], o2.five_percentile_throughput[t]]
-        # print([o1.five_percentile_throughput[t], o2.five_percentile_throughput[t]])
-        # requests.extend(torch.tensor([o1.request, o2.request]).float().tolist())
-        # requests.extend(F.softmax(torch.tensor([o1.five_percentile_throughput[t],
-        #                                         o2.five_percentile_throughput[t],]).float()).tolist())
-
-        # print(requests)
-        # print([o1.five_percentile_throughput[t], o2.five_percentile_throughput[t]])
-        # requests.extend([o1.five_percentile_throughput[t],o2.five_percentile_throughput[t],t])
         state = np.array(requests)
-        # state = np.append(state, len(self.operators[0].packet_queue.queue))
-        # state = np.append(state, len(self.operators[1].packet_queue.queue))
-        #print(f"state: {state}")
         return state
 
     def reset_state(self, n_operators: int = 2):
-        # def generate_traffic_patterns(n_operators: int = 2, 
-        #                               packet_means: List[int] = None,
-        #                               packet_amplitudes: List[int] = None):
-        #     x = np.linspace(-np.pi, np.pi, TIMESTEPS)
-        #     packet_distributions = [(np.sin(x)*packet_amplitudes[i]
-        #                             + packet_means[i]
-        #                             + np.random.normal(0, 1, TIMESTEPS)).astype(int)
-        #                             for i in range(n_operators)]
-
-        #     return packet_distributions
-        
-        # packet_distributions = generate_traffic_patterns(packet_means=[20,20],
-        #                                                  packet_amplitudes=[10,5])
-
-        # self.operators = [Operator(f"Operator {i+1}", packet_distributions[i])
-        #                   for i in range(n_operators)]
         x = np.linspace(-np.pi, np.pi, RUNTIME)
-        arrival_rates1 = (np.sin(x)*200).astype(int) + 1580
-        arrival_rates2 = (np.sin(x)*75).astype(int) + 1580
+        arrival_rates1 = (np.sin(x)*AMPLITUDES[0]).astype(int) + PACKETS_PER_OPERATOR_PER_SECOND#//60
+        arrival_rates2 = (np.sin(x)*AMPLITUDES[1]).astype(int) + PACKETS_PER_OPERATOR_PER_SECOND#//60
 
-       
         # Create the operators
+        # start = time.time()
         self.operators = [Operator("Operator 1", arrival_rates1), 
                           Operator("Operator 2", arrival_rates2)]
-        #plot_packet_distribution(self, show_plot=True);exit()
+        # end = time.time()
+        # print("Time elasped: ", end-start)
+        plot_packet_distribution(self, show_plot=True);exit()
 
         return self.get_state()
 
@@ -106,7 +62,7 @@ class Environment():
         if all(tp > 1 for tp in five_percentile_throughputs):
             return math.log(traffic_sum)#traffic_sum 
         else:
-            return 0#0#traffic_sum / 5# min(five_percentile_throughputs)
+            return 0
         
         
 

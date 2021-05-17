@@ -13,7 +13,7 @@ import math
 
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
-parser.add_argument('--gamma', type=float, default=0.03, metavar='G', 
+parser.add_argument('--gamma', type=float, default=0.5, metavar='G', 
                     help='discount factor (default: 0.99)')
 parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 543)')
@@ -50,6 +50,7 @@ class Policy(nn.Module):
 
 policy = Policy()
 # Best lr : 1e-2 = 0.01 ... 0.05
+#0.0005
 optimizer = optim.Adam(policy.parameters(), lr=0.0005) # TODO: Adjust learning rate
 # optimizer = optim.SGD(policy.parameters(), lr=0.0001, momentum=0.99)
 eps = np.finfo(np.float32).eps.item()
@@ -168,7 +169,7 @@ def main(args, bandwidth=None):
     plot.plot(action_timestep)
     plot.title('Average Spectrum % Allocated to Operator 1 during final episode')
     plot.xlabel('Timestep')
-    plot.ylabel('Spectrum %')
+    plot.ylabel(r'$a_1$')
     plot.savefig('avg_allocation.png')
     #plot.show()
     plot.close()

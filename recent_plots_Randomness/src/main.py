@@ -1,10 +1,10 @@
 import argparse
 from src.Reinforce import reinforce, actor_critic
 from src.Plotter.plotter import BASE_DIR
-from src.Test.baseline import baseline, baseline_tpmax
+from src.Test.baseline import baseline, baseline_tpmax, baseline_weighted
 import matplotlib.pyplot as plot
 import numpy as np
-from src.constants import TIMESTEPS
+from src.constants import *
 
 
 
@@ -26,15 +26,20 @@ args = parser.parse_args()
 def main_spectrumtest():
     
     num_cells = 5
-    spectrum = np.arange(70, 100, 5)
+    spectrum = SPECTRUM
     rewards = {}
+
+    arrival_rates1 = (np.sin(x)*AMPLITUDES[0]).astype(int) + PACKETS_PER_OPERATOR_PER_SECOND#//60
+    arrival_rates2 = (np.sin(x)*AMPLITUDES[1]).astype(int) + PACKETS_PER_OPERATOR_PER_SECOND#//60
+
+
     for s in spectrum:
-        print(f'Spectrum: {s}')
+        print(f'Spectrum : {s}')
         reward_env = [
-                      reinforce.main(args, bandwidth=s*num_cells),
+                    reinforce.main(args, bandwidth=s*num_cells),
+                    baseline(args, bandwidth=s*num_cells),
+                    baseline_weighted(args, bandwidth=s*num_cells),
                     #   actor_critic.main(args, bandwidth=s), 
-                      baseline(args, bandwidth=s*num_cells),
-                      baseline_weighted(args, bandwidth=s*num_cells),
                     #   baseline_tpmax(args, bandwidth=s),
                     #   baseline(args, split=0.1, bandwidth=s),
                     #   baseline(args, split=0.9, bandwidth=s)

@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 
 def baseline_weighted(args, bandwidth=None):
-    episodes = 100#args.episodes
+    episodes = 50#args.episodes
     running_reward = []
     env = Environment()
     env.algorithm_name = f"Baseline WeightedRequest"
@@ -64,7 +64,7 @@ def baseline_weighted(args, bandwidth=None):
             # action = F.softmax(state)
             state, reward = env.step(action, t)
 
-            # reward = math.exp(reward)
+            reward = math.exp(reward)
 
 
             ep_reward += reward
@@ -138,7 +138,7 @@ def baseline_tpmax(args, bandwidth=None):
 
 
 def baseline(args, bandwidth=None, split=args.split):
-    episodes = 100#args.episodes
+    episodes = 50#args.episodes
     running_reward = []
     env = Environment()
     env.algorithm_name = f"Baseline {split}"

@@ -1,5 +1,6 @@
 import numpy as np
 import queue
+from collections import deque
 from pprint import pprint
 from src.constants import *
 from src.packet import Packet
@@ -16,12 +17,19 @@ class Operator:
         self.cells = [] # TODO
         self.packets_at_timestep = [[] for t in range(TIMESTEPS)]
         packets = []
+        arrival_rates = np.random.poisson(lam=arrival_rates,size=RUNTIME)
+        mu, sigma = 10, 3
+        ses = []
         for s in range(RUNTIME):
-            arrival_rate = np.random.poisson(lam=arrival_rates[s],size=1)[0]
+            arrival_rate = arrival_rates[s]
             tt = np.linspace(0,1,arrival_rate)
             # packets.extend([Packet(arrival_time=s + tt[p]- 0.01)
             #                 for p in range(arrival_rate)])
-            packets.extend([Packet(arrival_time=s + tt[p] - np.random.rand()*0.01- 0.01)
+            #np.random.rand()*0.01
+            se = np.random.normal(mu, sigma, arrival_rate) * 8
+            arrival_times = tt + s - 0.01 #+ np.random.rand(arrival_rate)*0.01
+            packets.extend([Packet(arrival_time=arrival_times[p], 
+                                    spectral_efficiency=se[p])
                             for p in range(arrival_rate)])
 
         for p in packets:
@@ -31,15 +39,7 @@ class Operator:
         for t in range(TIMESTEPS):
             self.packets_at_timestep[t].sort(key=lambda p: p.arrival_time)
 
-        # if packets_at_timestep is not None:
-        #     self.packets_at_timestep = packets_at_timestep
-        # else:
-        #     self.packets_at_timestep = np.random.poisson(lam=self.lam,size=TIMESTEPS)
-        #             # TODO: This should be varying more
-        # self.packets_at_timestep = [[Packet(arrival_time=step*T_SLOT + np.random.rand()*T_SLOT) for _ in range(self.packets_at_timestep[step])] 
-        #                             for step in range(TIMESTEPS)]
-
-        self.packet_queue = queue.Queue()
+        self.packet_queue = deque()#queue.Queue()
         self.request = 0 # Request value to the allocator
         self.total_traffic_served = 0
         self.traffic_ema = np.zeros(TIMESTEPS+10000) # Exponential moving avg of traffic
@@ -63,13 +63,13 @@ class Operator:
         assert t < len(self.packets_at_timestep)
         
         for p in self.packets_at_timestep[t]:
-            self.packet_queue.put(p)
+            self.packet_queue.appendleft(p)
         
         t_remaining = T_SLOT
         self.throughput_arr = []
 
-        while t_remaining > 0 and not self.packet_queue.empty():
-            p = self.packet_queue.get()
+        while t_remaining > 0 and self.packet_queue:
+            p = self.packet_queue.pop()
             t_send_p = p.size / (self.bandwidth * p.spectral_efficiency) # Time required to send whole packet p [s]
             if t_send_p <= t_remaining:
                 # Whole packet p is sent                    
@@ -89,14 +89,15 @@ class Operator:
                 if chunk_endtime - p.arrival_time < 1:
                     traffic_served += p_chunk
                     self.throughput_arr.append(p_chunk / (chunk_endtime - p.arrival_time)) # [Mb / s]
-                    self.packet_queue.put(p) # Cannot send whole packet p during timestep t.
+                    # Cannot send whole packet p during timestep t, add it to front of queue.
+                    self.packet_queue.append(p) 
                     t_remaining = 0
                     break
                 else: 
                     self.throughput_arr.append(0)
 
         self.utilisation[t] = (T_SLOT - t_remaining) / T_SLOT
-        self.throughput_arr.extend([0 for p in self.packet_queue.queue])
+        self.throughput_arr.extend([0 for p in self.packet_queue])
 
         traffic_served /= RUNTIME#T_SLOT # Divide by T_SLOT to get [bits / s]
 
@@ -105,6 +106,7 @@ class Operator:
         self.calc_request(t)
         return traffic_served
     
+
     def get_reward(self, t):
         """
         Reward function : Total served traffic EMA
@@ -135,14 +137,11 @@ class Operator:
             0-20 B/s/Hz Spectral Efficiency
             1MB = 1*8Mb packet size
         """
-        # print(f"t: {t}", self.throughput_arr)
-        # print(f"t: {t} {self.name} TP Arr: {self.throughput_arr}")
         if not self.throughput_arr:
             five_percentile_throughput = 0
         else:
             five_percentile_throughput = np.percentile(self.throughput_arr, 5)
 
-        #print(f"t: {t} {self.name} 5TP: {five_percentile_throughput}")
         if five_percentile_throughput > 1:
             self.quality_served_traffic[t] = self.traffic_ema[t]
         else:
@@ -153,13 +152,6 @@ class Operator:
     def get_quality_served_traffic(self, t):
         return self.quality_served_traffic[t]
 
-
-    # if throughtput > threshold:
-        #reward = 1/Spectrum
-    # else:
-        #reward = 0
-
-
     def calc_reward(self, traffic_served, t):
         """
         Calculates reward function : Total served traffic exponential moving average (EMA)
@@ -168,19 +160,7 @@ class Operator:
         # NOTE: Could try a basic reward fn without EMA.
         [Mb / s]
         """
-        # value_t = traffic_served
-        # n = min(t,50)
-        # k = (2/(1+n))
-        # self.traffic_ema[t] = value_t * k + self.traffic_ema[t-1] * (1 - k)
         self.traffic_ema[t] = traffic_served # / self.bandwidth
-
-    def get_total_traffic_to_serve(self):
-        tot_traffic = 0
-        for t in range(TIMESTEPS):
-            for p in self.packets_at_timestep[t]: 
-                tot_traffic += p.size
-        return tot_traffic
-
 
     def calc_request(self, t):
         """
@@ -190,46 +170,16 @@ class Operator:
         e_j : spectral efficiency of packet j
         for every packet j in the packet queue
         """
-
-        self.request = 0
-        # for tt in range(t, (t+10) % TIMESTEPS):
-        #    self.request = sum([p.size / p.spectral_efficiency for p in self.packets_at_timestep[tt]])
-        
-        # if self.five_percentile_throughput[t] < 1:
-            # self.request = 100_000
-        # else:
-        self.request = sum([p.size / (p.spectral_efficiency) for p in self.packet_queue.queue])
-    
-        # [MHz * s]
-        # o1 request : 18
-        # o2 request : 16 
-        # total bw: 30
-        # Baseline 0.5
-        # o1 gets 15 Mhz
-        # o1 gets 15 MHz
-
-
-
-
+        self.request = sum([p.size / (p.spectral_efficiency) for p in self.packet_queue])
+ 
         if t+1 != TIMESTEPS:
             self.request += sum([p.size / p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
-        # if self.five_percentile_throughput[t] < 1:
-            # self.request += sum([p.size / (p.spectral_efficiency) for p in self.packet_queue.queue])
-            # self.request = 0.5
-        # self.request = 0.5
 
-        # if 0 < t and t < 300:
-        #     print(f't: {t} op: {self.name} tp: {self.five_percentile_throughput[t]}')
-        # self.request = 1 / (1+self.five_percentile_throughput[t])
-        value_t = self.request
-        n = min(t,5)
-        k = (2/(1+n))
-        if t == 0:
-            self.request = value_t
-        else:
-            self.request = value_t * k + self.request_arr[(t-1)] * (1 - k)
+        # value_t = self.request
+        # n = min(t,5)
+        # k = (2/(1+n))
+        # if t == 0:
+        #     self.request = value_t
+        # else:
+        #     self.request = value_t * k + self.request_arr[(t-1)] * (1 - k)
         self.request_arr.append(self.request)
-
-        # if self.five_percentile_throughput[t] < 1:
-        #     print("BAD!")
-        # print(f't: {t} {self.name}  tp : {self.five_percentile_throughput[t]}')

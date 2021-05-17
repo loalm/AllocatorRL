@@ -94,13 +94,14 @@ def plot_packet_distribution(env, show_plot = True):
         packet_distribution = []
         for t in range(TIMESTEPS):
             packet_distribution.append(len(o.packets_at_timestep[t]))
-        plot.plot(packet_distribution, label = o.name)
+            #
+        plot.plot(np.arange(TIMESTEPS)*T_SLOT/60/60, packet_distribution, label = o.name)
         # print(f'Total packets: {sum(packet_distribution)}')
         # plot.plot(o.arrival_rates, label = o.name)
     #plot.plot(env.operators[1].packet_distribution, label = env.operators[1].name)
     plot.legend()
     plot.title('Packet Distribution')
-    plot.xlabel('Timestep (t)')
+    plot.xlabel('Hour of day')
     plot.ylabel('Number of packets')
     plot.savefig(BASE_DIR + img_name)
     if show_plot:
@@ -123,7 +124,7 @@ def plot_action_timestep(env, action_timestep, show_plot = True):
     # plot.legend()
     plot.title(f'Spectrum Allocated to Operator 1 at timestep t with {env.algorithm_name}')
     plot.xlabel('Timestep t')
-    plot.ylabel('Spectrum %')
+    plot.ylabel(r'$a_1$')
     plot.savefig(BASE_DIR + f'Action_Timestep{env.algorithm_name}_BW{env.bandwidth}_TS{TIMESTEPS}.png')
     if show_plot:
         plot.show()

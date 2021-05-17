@@ -1,26 +1,16 @@
 import numpy as np
-
+from src.constants import PACKET_SIZE
 class Packet:
-    size = 8 # 8*10^6 bits = 1 MB = 1*8 Mb fixed packet size
+    size = PACKET_SIZE
     id = 1 # Static variable. Initial package should have id 0.
 
-    def __init__(self, arrival_time=None, id=None):
-        self.set_id(id)
+    def __init__(self, arrival_time=None, spectral_efficiency=None):
+        # self.set_id(id)
         self.arrival_time = arrival_time # [s]
+        self.spectral_efficiency = spectral_efficiency 
         self.endtime = -1 # [s]
-        self.set_efficiency() # ((bit/s)/Hz) NOTE: bit, not Byte
+        # self.set_efficiency() # ((bit/s)/Hz) NOTE: bit, not Byte
 
-    def set_efficiency(self):
-        mu, sigma = 10, 3 # mean and standard deviation
-        self.spectral_efficiency =  max(0.5,abs(np.random.normal(mu, sigma, 1)[0]) * 8) # Between 0-20 B/s/Hz with 99% probability
-
-    def set_id(self, id):
-        if id is None:
-            self.id = Packet.id
-            Packet.id += 1
-        else:
-            self.id = id
-    def __repr__(self):
-        return f"Packet #{self.id}"
-    def __str__(self):
-        return f"Packet #{self.id}"
+    # def set_efficiency(self):
+    #     mu, sigma = 10, 3 # mean and standard deviation
+    #     self.spectral_efficiency =  #max(0.5,abs(np.random.normal(mu, sigma, 1)[0]) * 8) # Between 0-20 B/s/Hz with 99% probability
