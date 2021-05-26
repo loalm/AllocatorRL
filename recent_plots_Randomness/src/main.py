@@ -25,20 +25,16 @@ args = parser.parse_args()
 
 def main_spectrumtest():
     
-    num_cells = 5
     spectrum = SPECTRUM
     rewards = {}
-
-    arrival_rates1 = (np.sin(x)*AMPLITUDES[0]).astype(int) + PACKETS_PER_OPERATOR_PER_SECOND#//60
-    arrival_rates2 = (np.sin(x)*AMPLITUDES[1]).astype(int) + PACKETS_PER_OPERATOR_PER_SECOND#//60
-
 
     for s in spectrum:
         print(f'Spectrum : {s}')
         reward_env = [
-                    reinforce.main(args, bandwidth=s*num_cells),
-                    baseline(args, bandwidth=s*num_cells),
-                    baseline_weighted(args, bandwidth=s*num_cells),
+                    baseline(args, split=0.5, bandwidth=s*NUM_CELLS),
+                    reinforce.main(args, bandwidth=s*NUM_CELLS),
+                    baseline_weighted(args, bandwidth=s*NUM_CELLS),
+                    # baseline(args, bandwidth=s*NUM_CELLS),
                     #   actor_critic.main(args, bandwidth=s), 
                     #   baseline_tpmax(args, bandwidth=s),
                     #   baseline(args, split=0.1, bandwidth=s),
@@ -46,11 +42,11 @@ def main_spectrumtest():
                     ]
 
         for (reward, env) in reward_env:
-            if env.algorithm_name == 'Baseline 0.5':
+            if env.algorithm_name != 'REINFORCE':
                 reward = sum(reward)/len(reward)
             else:
                 reward = max(reward)
-            reward /= num_cells
+            reward /= NUM_CELLS
             if env.algorithm_name not in rewards:
                 rewards[env.algorithm_name] = [reward]
             else:

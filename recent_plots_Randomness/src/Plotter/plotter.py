@@ -63,7 +63,7 @@ def plot_request_distribution(env, show_plot = True):
     plot.plot(np.arange(TIMESTEPS)*T_SLOT, o2.request_arr, label = o2.name)
     plot.legend()
     plot.title(f'Request Distribution with {env.algorithm_name}')
-    plot.xlabel('Timestep [t]')
+    plot.xlabel('Time [s]')
     plot.ylabel('Request size [MHz * s]')
     plot.savefig(BASE_DIR + img_name)
     if show_plot:
@@ -86,7 +86,7 @@ def plot_request_distribution(env, show_plot = True):
 
 
 
-def plot_packet_distribution(env, show_plot = True):
+def plot_packet_distribution(env, show_plot = True, hourly = True):
 
     img_name = f"PacketDistribution_{env.algorithm_name}.png".replace(" ", "")
     
@@ -95,13 +95,17 @@ def plot_packet_distribution(env, show_plot = True):
         for t in range(TIMESTEPS):
             packet_distribution.append(len(o.packets_at_timestep[t]))
             #
-        plot.plot(np.arange(TIMESTEPS)*T_SLOT/60/60, packet_distribution, label = o.name)
+        if hourly:
+            plot.xlabel('Hour of day')
+            plot.plot(np.arange(TIMESTEPS)*T_SLOT/60/60, packet_distribution, label = o.name)
+        else: 
+            plot.plot(packet_distribution, label = o.name)
+            plot.xlabel('Timestep [t]')
         # print(f'Total packets: {sum(packet_distribution)}')
         # plot.plot(o.arrival_rates, label = o.name)
     #plot.plot(env.operators[1].packet_distribution, label = env.operators[1].name)
     plot.legend()
     plot.title('Packet Distribution')
-    plot.xlabel('Hour of day')
     plot.ylabel('Number of packets')
     plot.savefig(BASE_DIR + img_name)
     if show_plot:

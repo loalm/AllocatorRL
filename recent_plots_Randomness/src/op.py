@@ -6,6 +6,7 @@ from src.constants import *
 from src.packet import Packet
 import math
 import numpy as np
+import matplotlib.pyplot as plot
 
 
 class Operator:
@@ -17,29 +18,46 @@ class Operator:
         self.cells = [] # TODO
         self.packets_at_timestep = [[] for t in range(TIMESTEPS)]
         packets = []
-        arrival_rates = np.random.poisson(lam=arrival_rates,size=RUNTIME)
+        arrival_rates = np.random.poisson(lam=arrival_rates,size=TIMESTEPS)
         mu, sigma = 10, 3
-        ses = []
-        for s in range(RUNTIME):
-            arrival_rate = arrival_rates[s]
-            tt = np.linspace(0,1,arrival_rate)
-            # packets.extend([Packet(arrival_time=s + tt[p]- 0.01)
-            #                 for p in range(arrival_rate)])
-            #np.random.rand()*0.01
-            se = np.random.normal(mu, sigma, arrival_rate) * 8
-            arrival_times = tt + s - 0.01 #+ np.random.rand(arrival_rate)*0.01
-            packets.extend([Packet(arrival_time=arrival_times[p], 
-                                    spectral_efficiency=se[p])
-                            for p in range(arrival_rate)])
 
-        for p in packets:
-            timestep = int(p.arrival_time // T_SLOT)
-            self.packets_at_timestep[timestep ].append(p)
+        # print(f"arrival rates: {arrival_rates}")
+        # plot.plot(arrival_rates)
+        # plot.show()
+        
+
+        for t in range(TIMESTEPS):
+            arrival_rate = arrival_rates[t]
+            se = np.random.normal(mu, sigma, arrival_rate) * 8
+            arrival_times = t*T_SLOT -  0.1 + np.random.rand(arrival_rate)*0.1
+            self.packets_at_timestep[t] = [Packet(arrival_time=arrival_times[p],
+                                                  spectral_efficiency=max(0.1, se[p])) 
+                                            for p in range(arrival_rate)]
+
+        # for s in range(RUNTIME):
+        #     arrival_rate = arrival_rates[s]
+        #     tt = np.linspace(0,1,arrival_rate)
+        #     # packets.extend([Packet(arrival_time=s + tt[p]- 0.01)
+        #     #                 for p in range(arrival_rate)])
+        #     #np.random.rand()*0.01
+        #     se = np.random.normal(mu, sigma, arrival_rate) * 8
+        #     arrival_times = tt + s - 0.0 + np.random.rand(arrival_rate)*0.0
+        #     packets.extend([Packet(arrival_time=arrival_times[p], 
+        #                             spectral_efficiency=max(0.1,se[p]))
+        #                     for p in range(arrival_rate)])
+
+        # for p in packets:
+        #     timestep = int(p.arrival_time // T_SLOT)
+        #     self.packets_at_timestep[timestep ].append(p)
 
         for t in range(TIMESTEPS):
             self.packets_at_timestep[t].sort(key=lambda p: p.arrival_time)
 
-        self.packet_queue = deque()#queue.Queue()
+        self.reset()
+
+
+    def reset(self):
+        self.packet_queue = deque()
         self.request = 0 # Request value to the allocator
         self.total_traffic_served = 0
         self.traffic_ema = np.zeros(TIMESTEPS+10000) # Exponential moving avg of traffic
@@ -58,6 +76,7 @@ class Operator:
 
         Return: The amount of traffic served (Mb/s) during this timestep.
         """
+
         traffic_served = 0 # [bit / s]
 
         assert t < len(self.packets_at_timestep)
@@ -68,7 +87,7 @@ class Operator:
         t_remaining = T_SLOT
         self.throughput_arr = []
 
-        while t_remaining > 0 and self.packet_queue:
+        while self.bandwidth != 0 and t_remaining > 0 and self.packet_queue:
             p = self.packet_queue.pop()
             t_send_p = p.size / (self.bandwidth * p.spectral_efficiency) # Time required to send whole packet p [s]
             if t_send_p <= t_remaining:
@@ -97,7 +116,7 @@ class Operator:
                     self.throughput_arr.append(0)
 
         self.utilisation[t] = (T_SLOT - t_remaining) / T_SLOT
-        self.throughput_arr.extend([0 for p in self.packet_queue])
+        self.throughput_arr.extend([0]*len(self.packet_queue))
 
         traffic_served /= RUNTIME#T_SLOT # Divide by T_SLOT to get [bits / s]
 
@@ -171,9 +190,9 @@ class Operator:
         for every packet j in the packet queue
         """
         self.request = sum([p.size / (p.spectral_efficiency) for p in self.packet_queue])
- 
-        if t+1 != TIMESTEPS:
-            self.request += sum([p.size / p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
+
+        # if t+1 != TIMESTEPS:
+        #     self.request += sum([p.size / p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
 
         # value_t = self.request
         # n = min(t,5)
@@ -182,4 +201,5 @@ class Operator:
         #     self.request = value_t
         # else:
         #     self.request = value_t * k + self.request_arr[(t-1)] * (1 - k)
+        # print(self.request)
         self.request_arr.append(self.request)

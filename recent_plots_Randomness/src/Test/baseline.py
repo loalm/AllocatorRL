@@ -30,7 +30,6 @@ def baseline_weighted(args, bandwidth=None):
 
     action_timestep = np.array([0]*TIMESTEPS, dtype='float')
 
-
     interval_avg_reward = 0
     for i_episode in range(episodes):
         state = env.reset_state()
@@ -44,15 +43,17 @@ def baseline_weighted(args, bandwidth=None):
             # print(f"arr1: {state}")
             # print(f"arr2: {[o1.request, o2.request]}")
             requests = []
-            n_datapoints = 5
-            if t > n_datapoints:
+            if t < 10:
+                requests = [o.request for o in env.operators]
+            else:
+                n_datapoints = min(t,100)
                 x = [*range(t-n_datapoints,t)]
                 y = [np.array(o.request_arr)[x] for o in env.operators]
                 request_polyfits = [np.polyfit(x, y[i], deg=2) for i, _ in enumerate(env.operators)]
-                request_polyvals = [np.polyval(request_polyfits[i], t) for i, _ in enumerate(env.operators)]
+                request_polyvals = [max(0, np.polyval(request_polyfits[i], t)) for i, _ in enumerate(env.operators)]
                 requests = request_polyvals
-            else:
-                requests = [o.request for o in env.operators]   
+
+            # print(env.operators[0].request, " : ", env.operators[1].request)   
 
             if all([val == 0 for val in requests]):
                 action = [.5]*len(env.operators)
@@ -60,11 +61,12 @@ def baseline_weighted(args, bandwidth=None):
                 summ = sum(requests)
                 action = [requests[i] / summ for i, _ in enumerate(env.operators)]
 
+            # print(f"action: {action}")
             # state = torch.tensor(state, dtype=float)
             # action = F.softmax(state)
             state, reward = env.step(action, t)
 
-            reward = math.exp(reward)
+            # reward = math.exp(reward)
 
 
             ep_reward += reward
@@ -157,7 +159,7 @@ def baseline(args, bandwidth=None, split=args.split):
             action = [split, 1-split] # Split evenly
             state, reward = env.step(action, t)
             ####
-            reward = math.exp(reward)
+            # reward = math.exp(reward)
             ####
             ep_reward += reward
             
