@@ -21,11 +21,6 @@ class Operator:
         arrival_rates = np.random.poisson(lam=arrival_rates,size=TIMESTEPS)
         mu, sigma = 10, 3
 
-        # print(f"arrival rates: {arrival_rates}")
-        # plot.plot(arrival_rates)
-        # plot.show()
-        
-
         for t in range(TIMESTEPS):
             arrival_rate = arrival_rates[t]
             se = np.random.normal(mu, sigma, arrival_rate) * 8
@@ -33,22 +28,6 @@ class Operator:
             self.packets_at_timestep[t] = [Packet(arrival_time=arrival_times[p],
                                                   spectral_efficiency=max(0.1, se[p])) 
                                             for p in range(arrival_rate)]
-
-        # for s in range(RUNTIME):
-        #     arrival_rate = arrival_rates[s]
-        #     tt = np.linspace(0,1,arrival_rate)
-        #     # packets.extend([Packet(arrival_time=s + tt[p]- 0.01)
-        #     #                 for p in range(arrival_rate)])
-        #     #np.random.rand()*0.01
-        #     se = np.random.normal(mu, sigma, arrival_rate) * 8
-        #     arrival_times = tt + s - 0.0 + np.random.rand(arrival_rate)*0.0
-        #     packets.extend([Packet(arrival_time=arrival_times[p], 
-        #                             spectral_efficiency=max(0.1,se[p]))
-        #                     for p in range(arrival_rate)])
-
-        # for p in packets:
-        #     timestep = int(p.arrival_time // T_SLOT)
-        #     self.packets_at_timestep[timestep ].append(p)
 
         for t in range(TIMESTEPS):
             self.packets_at_timestep[t].sort(key=lambda p: p.arrival_time)
@@ -189,11 +168,13 @@ class Operator:
         e_j : spectral efficiency of packet j
         for every packet j in the packet queue
         """
-        self.request = sum([p.size / (p.spectral_efficiency) for p in self.packet_queue])
-
-        # if t+1 != TIMESTEPS:
-        #     self.request += sum([p.size / p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
-
+        self.request = 0
+        if len(self.packet_queue) != 0:
+            # print([p.size / (60*24*p.spectral_efficiency) for p in self.packet_queue])
+            self.request = sum([1 / (1*p.spectral_efficiency) for p in self.packet_queue])
+        if t+1 != TIMESTEPS :
+            self.request += sum([1/p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
+        # print(self.name, " : ", self.request)
         # value_t = self.request
         # n = min(t,5)
         # k = (2/(1+n))

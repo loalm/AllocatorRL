@@ -100,7 +100,7 @@ def main(args, bandwidth=None):
     interval_avg_reward = 0
 
     action_timestep = np.array([0]*TIMESTEPS, dtype='float')
-    policy.load_state_dict(torch.load('policy_weights.pth'))
+    # policy.load_state_dict(torch.load('policy_weights.pth'))
     env.algorithm_name = "REINFORCE"
     print(f"Running {env.algorithm_name}")
 
@@ -178,7 +178,7 @@ def main(args, bandwidth=None):
     #plot.show()
     plot.close()
 
-    # plot_action_timestep(env, action_timestep, show_plot=args.show_plot)
+    plot_action_timestep(env, action_timestep, show_plot=args.show_plot)
     plot_reward_timestep(env, reward_timestep, show_plot=args.show_plot)
     plot_5th_percentile_throughput(env, show_plot=args.show_plot)
     plot_average_reward(env, args.log_interval, running_reward, show_plot=args.show_plot)

@@ -33,7 +33,7 @@ def main_spectrumtest():
         reward_env = [
                     baseline(args, split=0.5, bandwidth=s*NUM_CELLS),
                     reinforce.main(args, bandwidth=s*NUM_CELLS),
-                    baseline_weighted(args, bandwidth=s*NUM_CELLS),
+                    # baseline_weighted(args, bandwidth=s*NUM_CELLS),
                     # baseline(args, bandwidth=s*NUM_CELLS),
                     #   actor_critic.main(args, bandwidth=s), 
                     #   baseline_tpmax(args, bandwidth=s),
