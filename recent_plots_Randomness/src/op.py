@@ -171,9 +171,11 @@ class Operator:
         self.request = 0
         if len(self.packet_queue) != 0:
             # print([p.size / (60*24*p.spectral_efficiency) for p in self.packet_queue])
-            self.request = sum([1 / (1*p.spectral_efficiency) for p in self.packet_queue])
-        if t+1 != TIMESTEPS :
-            self.request += sum([1/p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
+            self.request = sum([1 / p.spectral_efficiency for p in self.packet_queue])
+        if t+1 < TIMESTEPS :
+            self.request += sum([1 / p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
+        # if t+2 < TIMESTEPS :
+        #     self.request += sum([1/p.spectral_efficiency for p in self.packets_at_timestep[t+2]])
         # print(self.name, " : ", self.request)
         # value_t = self.request
         # n = min(t,5)
