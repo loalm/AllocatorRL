@@ -19,7 +19,7 @@ class Operator:
         self.packets_at_timestep = [[] for t in range(TIMESTEPS)]
         packets = []
         arrival_rates = np.random.poisson(lam=arrival_rates,size=TIMESTEPS)
-        mu, sigma = 10, 3
+        mu, sigma = 10, 3 # Average 10 [bps / Hz]
 
         for t in range(TIMESTEPS):
             arrival_rate = arrival_rates[t]
@@ -76,7 +76,8 @@ class Operator:
                 #print(f"Whole: {p.size}")
                 if p.endtime - p.arrival_time < 1:
                     traffic_served += p.size
-                    self.throughput_arr.append(p.size / (p.endtime - p.arrival_time)) # [Mb / s]
+                    self.throughput_arr.append((p.size / (p.endtime - p.arrival_time)))
+                    #self.throughput_arr.append(p.size / (p.endtime - p.arrival_time)) # [Mb / s]
                 else:
                     self.throughput_arr.append(0)
             else:
@@ -86,7 +87,8 @@ class Operator:
                 chunk_endtime = max(t*T_SLOT,p.arrival_time) + t_send_p # Set the time t2 when p was fully sent. [s]
                 if chunk_endtime - p.arrival_time < 1:
                     traffic_served += p_chunk
-                    self.throughput_arr.append(p_chunk / (chunk_endtime - p.arrival_time)) # [Mb / s]
+                    self.throughput_arr.append((p_chunk / (chunk_endtime - p.arrival_time)))
+                    #self.throughput_arr.append(p_chunk / (chunk_endtime - p.arrival_time)) # [Mb / s]
                     # Cannot send whole packet p during timestep t, add it to front of queue.
                     self.packet_queue.append(p) 
                     t_remaining = 0
@@ -139,6 +141,8 @@ class Operator:
             five_percentile_throughput = 0
         else:
             five_percentile_throughput = np.percentile(self.throughput_arr, 5)
+        
+        # print(f"5% TP: {five_percentile_throughput}")
 
         if five_percentile_throughput > 1:
             self.quality_served_traffic[t] = self.traffic_ema[t]
@@ -171,9 +175,9 @@ class Operator:
         self.request = 0
         if len(self.packet_queue) != 0:
             # print([p.size / (60*24*p.spectral_efficiency) for p in self.packet_queue])
-            self.request = sum([1 / p.spectral_efficiency for p in self.packet_queue])
+            self.request = sum([(p.size / PACKET_SIZE)/p.spectral_efficiency for p in self.packet_queue])
         if t+1 < TIMESTEPS :
-            self.request += sum([1 / p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
+            self.request += sum([(p.size / PACKET_SIZE)/p.spectral_efficiency for p in self.packets_at_timestep[t+1]])
         # if t+2 < TIMESTEPS :
         #     self.request += sum([1/p.spectral_efficiency for p in self.packets_at_timestep[t+2]])
         # print(self.name, " : ", self.request)

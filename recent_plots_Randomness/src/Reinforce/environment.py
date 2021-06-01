@@ -79,7 +79,6 @@ class Environment():
         for i, operator in enumerate(self.operators):
             operator.bandwidth += spectrum[i]
             operator.schedule_packets(t)
-
             operator.bandwidth -= spectrum[i]
 
         reward = self.calc_quality_served_traffic(t)

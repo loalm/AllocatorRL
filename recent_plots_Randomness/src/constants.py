@@ -1,16 +1,29 @@
 import numpy as np
 
 ####### Downscaled 1 minute: USE THIS TO TRAIN! #####
-x = 2
-RUNTIME = 60*x # [s] 
-TIMESTEPS = 500 # Total t number of TIMESTEPS
-T_SLOT = RUNTIME/TIMESTEPS # [s] The length of 1 timestep
-LEARNING_RATE = 0.0005# NOTE
-PACKET_AMPLITUDES_PER_SECOND = [500*1/x, 100*1/x]
-PACKETS_PER_OPERATOR_PER_SECOND = [1580*1//x, 1580*1//x]#1580/60   
-PACKET_SIZE = 8*x # [Mb] 8*10^6 bits = 1 MB = 1*8 Mb fixed packet size
-NUM_CELLS = 10
-SPECTRUM = np.arange(300, 1010, 10)#check: 140, 160, 180, 200, 220, 240, 260 with MAX
+# x = 60*5
+# RUNTIME = 60*x # [s] 
+# TIMESTEPS = 500 # Total t number of TIMESTEPS
+# T_SLOT = RUNTIME/TIMESTEPS # [s] The length of 1 timestep
+# LEARNING_RATE = 0.0005# NOTE
+# PACKET_AMPLITUDES_PER_SECOND = [500*2/x, 100*2/x]
+# PACKETS_PER_OPERATOR_PER_SECOND = [1580*2/x, 1580*2/x]#1580/60   
+# PACKET_SIZE = 8*x # [Mb] 8*10^6 bits = 1 MB = 1*8 Mb fixed packet size
+# NUM_CELLS = 10
+# SPECTRUM = np.arange(90, 10010, 20)#check: 140, 160, 180, 200, 220, 240, 260 with MAX
+####### #######
+
+####### Downscaled 5h Checkpoint: Outperforms baseline #####
+# x = 60*24 # Scaling factor
+# RUNTIME = 60*x # [s] 
+# TIMESTEPS = 500 # Total t number of TIMESTEPS
+# T_SLOT = RUNTIME/TIMESTEPS # [s] The length of 1 timestep
+# LEARNING_RATE = 0.0005
+# PACKET_AMPLITUDES_PER_SECOND = [500*2/x, 100*2/x]
+# PACKETS_PER_OPERATOR_PER_SECOND = [1580*2/x, 1580*2/x]  
+# PACKET_SIZE = 8*x # [Mb]
+# NUM_CELLS = 10
+# SPECTRUM = np.arange(60, 120, 5)
 ####### #######
 
 ####### Downscaled 2h Checkpoint: Outperforms baseline! #####
